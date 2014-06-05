@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 process.stdout.write("\x1Bc");
 
 var readline = require('readline'),
