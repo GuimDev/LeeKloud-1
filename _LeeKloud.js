@@ -1,0 +1,775 @@
+process.stdout.write("\x1Bc");
+
+var readline = require('readline'),
+	querystring = require('querystring'),
+	exec = require('child_process').exec,
+	http = require('http'),
+	fs = require('fs'),
+	crypto = require('crypto'),
+	path = require('path')
+util = require('util');
+
+var rl = readline.createInterface({
+	input: process.stdin,
+	output: process.stdout,
+	completer: completer
+});
+
+// Modifier cette commande par la votre. (WinMerge permet de comparer deux fichiers sous Windows).
+var compare_cmd = '"C:\\Program Files (x86)\\WinMerge\\WinMergeU.exe" "%s" "%s"';
+
+var __AI_IDS = [],
+	__AI_NAMES = [],
+	__TOKEN = "";
+
+var __FILEHASH = [],
+	__FILEBACK = [],
+	__FILEMTIME = [];
+
+var __fileload = 0;
+
+var myCookie = "";
+
+function fixASCII(data) { // Problème d'encodage, on vire le caractère 65279.
+	while (data.charCodeAt(0) == 65279) {
+		data = data.replace(/^./, "");
+	}
+	return data;
+}
+
+function main() {
+	console.log("----------------------------------------------------------------------------");
+	console.log("------------------------------ LeeKloud 1.0.0 ------------------------------");
+	console.log("Programme proposé par @GuimDev, certaines parties du code sont sous licence.");
+	console.log("-- En partenariat avec cfiChat : http://chat.cfillion.tk/ (programmation).--");
+	console.log("En cas de problème contactez moi sur le forum, ou MP HorsSujet (farmer=265).");
+	console.log("----------------------------------------------------------------------------");
+
+	if (!fs.existsSync(".temp/")) {
+		fs.mkdirSync(".temp/");
+	}
+	if (!fs.existsSync(".temp/backup/")) {
+		fs.mkdirSync(".temp/backup/");
+	}
+	if (!fs.existsSync(".temp/cookie")) {
+		console.log("Connexion nécessaire.");
+		rl.question("Pseudo : ", function(pseudo) {
+			hidden("Password : ", function(password) {
+				$.post({
+					url: "/index.php?page=login_form",
+					data: {
+						login: pseudo,
+						pass: password
+					},
+					success: function(res, data) {
+						if (data == "0") {
+							var dataCookie = mkdataCookie(res.headers["set-cookie"]);
+							fs.writeFileSync(".temp/cookie", JSON.stringify(dataCookie));
+
+							myCookie = dataCookieToString(dataCookie);
+							console.log("Connexion réussite.");
+
+							getScripts();
+						} else {
+							console.log("Connexion échouée.");
+							process.exit();
+						}
+					}
+				});
+			});
+		});
+	} else {
+		var dataCookie = JSON.parse(getFileContent(".temp/cookie"));
+
+		myCookie = dataCookieToString(dataCookie);
+		console.log("Connexion automatique.");
+
+		getScripts();
+	}
+}
+
+setTimeout(main, 10);
+
+function getScripts() {
+	if (fs.existsSync(".temp/hash")) {
+		__FILEHASH = JSON.parse(getFileContent(".temp/hash"));
+	}
+	console.log("Obtention de la liste des scripts.");
+	$.get({
+		url: "/editor",
+		success: function(res, data) {
+			if (data == "") {
+				console.log("Vous n'êtes pas connecté, connectez-vous.");
+				fs.unlinkSync(".temp/cookie");
+				return process.exit();
+			}
+
+			__AI_IDS = JSON.parse(data.match(/<script>__AI_IDS = (.*?);<\/script>/)[1]);
+			__AI_NAMES = JSON.parse(data.match(/<script>__AI_NAMES = (.*?);<\/script>/)[1]);
+			__TOKEN = data.match(/<script>var __TOKEN = '(.*?)';<\/script>/)[1];
+
+			console.log("\n>> Téléchargements...");
+			__AI_IDS.forEach(function(value, index) {
+				loadScript(value, index, successloadScript);
+			});
+		}
+	});
+}
+
+function getFilename(id) {
+	var name = __AI_NAMES[__AI_IDS.indexOf(id)];
+	name = name.replace("[hs", "[ks");
+	name = name.replace(/[\/]/g, "[").replace(/[\\]/g, "]");
+	name = name.replace(/[:*?]/g, "!").replace(/["<>]/g, "'");
+	name = name.replace(/ ?[&|] ?/g, "'n'");
+	name = name.replace(/[\/\\:*?"<>&|]/g, "");
+
+	return name + "[hs" + id + "].js";
+}
+
+function getFilenameBackup(filename) {
+	return ".temp/backup/" + filename + ".back.js";
+}
+
+function getFileContent(filename) {
+	return fixASCII(fs.readFileSync(filename).toString());
+}
+
+function sendScript(id, forceUpdate) {
+	forceUpdate = (forceUpdate) ? true : false;
+	loadScript(id, __AI_IDS.indexOf(id), function(res, data, context) {
+		var filename = getFilename(id),
+			serverhash = sha256(data),
+			code = getFileContent(filename);
+
+		__FILEHASH[id].filehash = sha256(code);
+
+		if (__FILEHASH[id].lasthash == serverhash || forceUpdate) {
+			__FILEHASH[id].lasthash = __FILEHASH[id].filehash;
+			$.post({
+				url: "/index.php?page=editor_update",
+				data: {
+					id: id,
+					compile: true,
+					token: __TOKEN,
+					code: code
+				},
+				context: {
+					id: id
+				},
+				success: function(res, data, context) {
+					data = JSON.parse(data);
+					console.log(" ");
+					console.log("L'envoie de \033[36m" + getFilename(context.id) + "\033[00m " + ((data.success) ? "réussi" : "echoué") + ".");
+					if (data.success) {
+						console.log("Niveau : " + data.level + " Coeur : " + data.core);
+					} else { // Gestion des erreurs :
+						console.log(" ");
+						var codeline = code.replace(/\t/g, "    ").split("\n"),
+							l = parseInt(data.line),
+							s = (l + " ").length,
+							pos = (s + 2) + code.split("\n")[l - 1].replace(/[^\t]/g, "").length * 3 + parseInt(data.char);
+
+						for (var i = l - 5; i < l; i++) {
+							alignLine(i + 1, codeline[i], s);
+						}
+						console.log(Array(pos).join(" ") + "\033[91m^\033[00m");
+						console.log("Error: " + data.error + " (ligne : " + data.line + ", caract : " + data.char + ").");
+					}
+				}
+			});
+			fs.writeFileSync(".temp/hash", JSON.stringify(__FILEHASH));
+		} else {
+			console.log("La version du serveur est différente, elle a été changé depuis le dernier téléchargement. Forcez l'envois avec la commande \"\033[97m.forceupdate " + id + "\033[00m\".");
+			rl.history.push(".forceupdate " + id);
+		}
+	});
+}
+
+function alignLine(num, text, longer) {
+	num = num + Array(longer - (num + "").length).join(" ");
+	console.log("\033[36m" + num + " |\033[00m " + text);
+}
+
+function loadScript(value, index, success) {
+	console.log("- Requête pour \033[36m" + __AI_NAMES[index] + "\033[00m.");
+	$.post({
+		url: "/index.php?page=editor_update",
+		data: {
+			id: value,
+			load: true,
+			token: __TOKEN
+		},
+		context: {
+			id: value,
+			name: __AI_NAMES[index],
+			index: index
+		},
+		success: function(res, data, context) {
+			// Reprise de la modif de Pilow : "Là y'a un souci, le code présente une ligne de plus :/ On la dégage"
+			data = data.slice(0, -1);
+			success(res, data, context);
+		}
+	});
+}
+
+function successloadScript(res, data, context) {
+	if (data == "") {
+		return;
+	}
+
+	var name = context.name,
+		id = context.id,
+		index = context.index;
+
+
+	var filename = getFilename(id),
+		serverhash = sha256(data),
+		type = "",
+		action = "";
+
+	if (fs.existsSync(filename)) {
+		if (!__FILEHASH[id]) {
+			__FILEHASH[id] = {
+				lasthash: 12
+			};
+		}
+		__FILEHASH[id].filehash = sha256(getFileContent(filename));
+	} else if (__FILEHASH[id]) {
+		var files = fs.readdirSync("./");
+		for (var i = 0; i < files.length; i++) {
+			if ((new RegExp("\\[hs"+id+"\\].js$")).test(files[i])) {
+				console.log("Une IA a été renommé "+files[i]+" en "+filename+".");
+				fs.renameSync(files[i], filename);
+			}
+		}
+	} else {
+		delete __FILEHASH[id];
+	}
+
+	var thash = __FILEHASH[id];
+	if (!thash) {
+		type = "\033[96mCreation";
+		action = 1;
+	} else if (thash.filehash == serverhash) { //thash.lasthash == thash.filehash
+		type = "\033[95mIdentique";
+		action = 0;
+	} else if (thash.lasthash == 12) {
+		type = "\033[93mHash manquant";
+		action = 4;
+	} else if (thash.lasthash == thash.filehash && thash.filehash != serverhash) {
+		type = "\033[96mServeur changé";
+		action = 1;
+	} else if (thash.lasthash == serverhash && thash.filehash != serverhash) {
+		type = "\033[92mClient changé";
+		action = 2;
+	} else if (thash.lasthash != thash.filehash && thash.filehash != serverhash) {
+		type = "\033[93mS & C changé";
+		action = 3;
+	} else {
+		type = "\033[91mSi tu me vois dis le sur le forum (err:2-" + thash.lasthash + "-" + thash.filehash + "-" + serverhash + ").";
+	}
+
+	console.log(" ");
+	if (action === 1 || action === 4) {
+		console.log("- Téléchargement de \033[36m" + filename + "\033[00m (fichier distant plus récent).");
+		if (action === 4) {
+			backup_change(action, filename, id);
+		}
+		fs.writeFileSync(filename, data);
+		__FILEHASH[id] = {
+			lasthash: serverhash,
+			filehash: serverhash
+		};
+	} else if (action === 2 || action === 3) {
+		console.log("- Envoie de \033[36m" + filename + "\033[00m (fichier local plus récent).");
+		sendScript(id, true);
+		if (action === 3) {
+			backup_change(action, filename, id, data);
+		}
+	} else if (action === 0) {
+		console.log("- \033[36m" + filename + "\033[00m.");
+	} else {
+		console.log("\033[91mSi tu me vois dis le sur le forum (err:3).\033[00m");
+	}
+
+	console.log("--- ETAT : \033[36m" + type + "\033[00m\n");
+
+	if (__fileload++ && __fileload >= __AI_IDS.length) {
+		console.log(" \n>> Tous les téléchargements sont terminés.\n");
+	}
+	fs.writeFileSync(".temp/hash", JSON.stringify(__FILEHASH));
+
+	fs.stat(filename, function(err, stats) {
+		__FILEMTIME[id] = new Date(stats.mtime).getTime();
+	});
+
+	fs.watch(filename, function(event, filename) {
+		if (filename && event == "change") {
+			fs.stat(filename, function(err, stats) {
+				var mtime = new Date(stats.mtime).getTime(),
+					hash = sha256(getFileContent(filename));
+				if (__FILEMTIME[id] != mtime && __FILEHASH[id].filehash != hash) {
+					console.log("\033[36m" + filename + "\033[00m a changé.");
+					__FILEHASH[id].filehash = hash;
+					sendScript(id, false);
+				}
+				__FILEMTIME[id] = mtime;
+			});
+		}
+	});
+}
+var $ = {
+	post: post,
+	get: get
+};
+
+function backup_change(action, filename, id, data) {
+	var localapplique = (action == 3) ? true : false;
+
+	var applique = (localapplique) ? "\033[92mversion locale" : "\033[96mversion distante",
+		backup = (localapplique) ? "\033[96mversion distante" : "\033[92mversion locale";
+
+	if (action == 3) {
+		fs.writeFileSync(".temp/backup/" + filename + ".back.js", data);
+	} else if (action == 4) {
+		fs.writeFileSync(".temp/backup/" + filename + ".back.js", getFileContent(filename));
+	} else {
+		return console.log("\033[91mSi tu me vois dis le sur le forum (err:4).\033[00m");
+	}
+	console.log("- La " + applique + "\033[00m a été appliqué, vous pouvez choisir la " + backup + "\033[00m avec la commande \"\033[97m.backup " + id + "\033[00m\".");
+
+	rl.history.push(".backup " + id + " restore");
+	__FILEBACK[__AI_IDS.indexOf(id)] = id;
+}
+
+function useCommande(line) {
+	var commande = line.split(" ");
+	if (commande[0] == ".backup") {
+		var id = parseInt(commande[1]),
+			index = __AI_IDS.indexOf(id);
+
+		if (index != -1 && __FILEBACK[index] == id) {
+			var filename = getFilename(id),
+				filenameback = getFilenameBackup(filename);
+
+			if (commande[2] == "restore") {
+				var backup = "";
+				console.log("Le backup de \033[36m" + filename + "\033[00m a été restauré. Vous pouvez réutiliser la précédente commande si vous changez d'avis.");
+				backup = getFileContent(filenameback);
+				fs.writeFileSync(filenameback, getFileContent(filename));
+				fs.writeFileSync(filename, backup);
+			} else if (commande[2] == "open") {
+				console.log("Le backup de \033[36m" + filename + "\033[00m a été ouvert.");
+				open(filenameback);
+			} else if (commande[2] == "compare") {
+				exec(util.format(compare_cmd, o_escape(path.resolve(filename)), o_escape(path.resolve(filenameback))));
+				console.log("Comparaison entre \"\033[36m" + filename + "\033[00m\" et \"\033[36m" + filenameback + "\033[00m\".");
+			} else {
+				console.log("Merci de préciser la sous-commande : .backup [id] {restore / open / compare.}");
+			}
+		} else {
+			console.log("Le backup n'existe pas.");
+		}
+	} else if (commande[0] == ".forceupdate") {
+		var id = parseInt(commande[1]),
+			index = __AI_IDS.indexOf(id);
+
+		if (index != -1) {
+			sendScript(id, true);
+			console.log("Mise à jour de l'IA n°\033[36m" + id + "\033[00m, \033[36m" + __AI_NAMES[index] + "\033[00m.");
+		} else {
+			console.log("Liste des IA :");
+			__AI_IDS.forEach(function(id, index) {
+
+				console.log("- \033[36m" + id + "\033[00m : \033[36m" + __AI_NAMES[index] + "\033[00m.");
+			});
+		}
+	} else if (commande[0] == ".open") {
+		var id = parseInt(commande[1]),
+			index = __AI_IDS.indexOf(id);
+
+		if (index != -1) {
+			open(getFilename(id));
+			console.log("Ouverture de l'IA n°\033[36m" + id + "\033[00m, \033[36m" + __AI_NAMES[index] + "\033[00m.");
+		} else {
+			console.log("Liste des IA :");
+			__AI_IDS.forEach(function(id, index) {
+
+				console.log("- \033[36m" + id + "\033[00m : \033[36m" + __AI_NAMES[index] + "\033[00m.");
+			});
+		}
+	} else if (commande[0] == ".compare") {
+		var ids = [parseInt(commande[1]), parseInt(commande[2])],
+			index = [__AI_IDS.indexOf(ids[0]), __AI_IDS.indexOf(ids[1])];
+
+		if (index[0] != -1 && index[1] != -1) {
+			exec(util.format(compare_cmd, o_escape(path.resolve(getFilename(ids[0]))), o_escape(path.resolve(getFilename(ids[1])))));
+
+			console.log("Comparaison de l'IA n°\033[36m" + ids[0] + "\033[00m et n°\033[36m" + ids[1] + "\033[00m, \033[36m" + __AI_NAMES[index[0]] + "\033[00m et \033[36m" + __AI_NAMES[index[1]] + "\033[00m.");
+		} else {
+			console.log("Liste des IA :");
+			__AI_IDS.forEach(function(id, index) {
+
+				console.log("- \033[36m" + id + "\033[00m : \033[36m" + __AI_NAMES[index] + "\033[00m.");
+			});
+		}
+	} else if (["help", "?", ".help", "/?"].indexOf(commande[0]) != -1) {
+		console.log("Aide :");
+		console.log("\033[97m.backup [id] {restore / open / compare}\033[00m : Gestion des backups.");
+		console.log("\033[97m.forceupdate [id]\033[00m : Forcer l'envoie de l'IA.");
+		console.log("\033[97m.open [id]\033[00m : Ouvre l'IA.");
+		console.log("\033[97m.compare [id1] [id2]\033[00m : Compare deux fichiers.");
+		console.log("Autres :\n{ \033[97mtwitter / cfichat / forum / MP / leek / doc\033[00m }".replace(/ \/ /g, "\033[00m / \033[97m"));
+		console.log("Astuces :");
+		console.log("- Si on vous demande de taper \"\033[97m.backup [id]\033[00m\", essayez la flèche du haut.");
+		console.log("- Essayez la touche tabulation lors de la saisie d'une commande.");
+		console.log("- Modifier la variable compare_cmd ligne 24 pour pouvoir utiliser la fonction 'compare'.");
+	} else if (commande[0] == "cfichat") {
+		console.log("cfiChat : canal de discussion (HomeMade) - Programmation");
+		open("http://chat.cfillion.tk/");
+	} else {
+		var C = false;
+		switch (commande[0]) {
+			case "twitter":
+				C = open("https://twitter.com/GuimDev");
+				break;
+			case "forum":
+				C = open("http://leekwars.com/forum/category-7/topic-221");
+				break;
+			case "MP":
+				C = open("http://leekwars.com/farmer=265");
+				break;
+			case "leek":
+				C = open("http://leekwars.com/");
+				break;
+			case "doc":
+				C = open("http://leekwars.com/documentation");
+				break;
+			default:
+				console.log("Inconnu regarde l'aide \".help\".");
+		}
+		if (C) {
+			console.log("Page ouverte " + commande[0] + ".");
+		}
+	}
+	console.log(" ");
+}
+
+function completerId(cmd, line, hits, verify) {
+	var t = [cmd];
+	if (line.indexOf(cmd) == 0) {
+		__AI_IDS.forEach(function(id, index) {
+			if (!verify(id, index)) {
+				return;
+			}
+			t.push(cmd + id);
+		});
+		hits = t.filter(function(c) {
+			return c.indexOf(line) == 0;
+		});
+		if (hits.length == 0) {
+			hits = t;
+		}
+	}
+	return hits;
+}
+
+function completerMore(line, hits) {
+	if (hits.length == 1) {
+		rl.line = line = hits[0];
+	}
+	hits = completerId(".backup ", line, hits, function(id, index) {
+		return (__FILEBACK[index] == id);
+	});
+	hits = completerId(".forceupdate ", line, hits, function(id, index) {
+		return true;
+	});
+	hits = completerId(".open ", line, hits, function(id, index) {
+		return true;
+	});
+	hits = completerId(".compare ", line, hits, function(id, index) {
+		return true;
+	});
+
+	return hits;
+}
+
+var __TAB_COMPLETIONS = [".help", ".backup ", ".forceupdate ", ".open ", ".compare "].concat("twitter / cfichat / forum / MP / leek / doc ".split(" / "));
+
+////--------------------------------------------------------------------------------
+////--------------------------------------------------------------------------------
+////--------------------------------------------------------------------------------
+
+function invasionB(b) {
+	b = b ? true : false;
+	if (b) {
+		process.stdout.write("\x1Bc");
+	}
+	var a = [540608, 573488, 589836, 661698, 661698, 792769, 786433, 802785, 664098, 664514, 597004, 573488, 540608];
+
+	var noNegative = function(value) {
+		return value = (value < 0) ? 0 : value;
+	};
+
+	var stdout = process.stdout;
+	var margin_y = (b) ? noNegative(Math.round((stdout.rows - a.length) / 2)) : 0;
+	console.log(" " + Array(margin_y).join("\n"));
+	for (var i = 0, value = 0; i < a.length; i++) {
+		value = a[i].toString(2).substr(1);
+		console.log(Array(noNegative(Math.round((stdout.columns - value.length) / 2))).join(" ") + value.replace(/0/g, " "));
+	}
+	console.log(" " + ((b) ? Array(noNegative(stdout.rows - a.length - margin_y - 3)).join("\n") : ""));
+}
+invasionB(0);
+
+function sha256(data) {
+	return crypto.createHash("sha256").update(data).digest("base64");
+}
+
+var __HIDDEN_PLAY = false;
+function hidden(query, callback) {
+	var stdin = process.openStdin(),
+		i = 0;
+	__HIDDEN_PLAY = true;
+	process.stdin.on("data", function(char) {
+		if (!__HIDDEN_PLAY) {
+			return;
+		}
+		char = char + "";
+		switch (char) {
+			case "\u0003":
+				process.exit();
+				break;
+			case "\n":
+			case "\r":
+			case "\u0004":
+				__HIDDEN_PLAY = false;
+				break;
+			default:
+				process.stdout.write("\033[2K\033[200D" + query + "[" + ((i % 2 == 1) ? "=-" : "-=") + "]");
+				i++;
+				break;
+		}
+	});
+
+	rl.question(query, callback);
+}
+
+function get(option) {
+	option.method = "GET";
+	ajax(option);
+}
+
+function post(option) {
+	option.method = "POST";
+	ajax(option);
+}
+
+function ajax(option) {
+	var data = (option.data) ? querystring.stringify(option.data) : "",
+		context = (option.context) ? option.context : {};
+
+	var options = {
+		host: "leekwars.com",
+		port: "80",
+		path: option.url,
+		method: (option.method == "GET") ? "GET" : "POST",
+		headers: {
+			"User-Agent": "NodeJS/1.0",
+			"Content-Type": "application/x-www-form-urlencoded",
+			"Content-Length": data.length,
+			"Cookie": myCookie
+		}
+	};
+
+	var req = http.request(options, function(res) {
+		res.setEncoding('utf8');
+		var content = "";
+
+		res.on('data', function(chunk) {
+			content += chunk;
+		});
+
+		res.on('end', function() {
+			fs.writeFileSync(".temp/debug_print_r.js", print_r(res));
+			if (option.success) {
+				option.success(res, fixASCII(content), context);
+			}
+		});
+	});
+
+	req.on('error', function(e) {
+		console.log('Erreur : ' + e.message);
+	});
+
+	req.write(data);
+	req.end();
+}
+
+function dataCookieToString(dataCookie) {
+	var t = "";
+	for (var x = 0; x < dataCookie.length; x++) {
+		t += ((t != "") ? "; " : "") + dataCookie[x].key + "=" + dataCookie[x].value;
+	}
+	return t;
+}
+
+function mkdataCookie(cookie) {
+	var t, j;
+	cookie = cookie.toString().replace(/,([^ ])/g, ",[12],$1").split(",[12],");
+	for (var x = 0; x < cookie.length; x++) {
+		cookie[x] = cookie[x].split("; ");
+		j = cookie[x][0].split("=");
+		t = {
+			key: j[0],
+			value: j[1]
+		};
+		for (var i = 1; i < cookie[x].length; i++) {
+			j = cookie[x][i].split("=");
+			t[j[0]] = j[1];
+		}
+		cookie[x] = t;
+	}
+
+	return cookie;
+}
+
+function print_r(obj) {
+	var cache = [];
+	return JSON.stringify(obj, function(key, value) {
+		if (typeof value === 'object' && value !== null) {
+			if (cache.indexOf(value) !== -1) {
+				return;
+			}
+			cache.push(value);
+		}
+		return value;
+	});
+}
+
+////--------------------------------------------------------------------------------
+////----------------------------- // LICENCE CC BY-SA \\ ---------------------------
+////-------------- Le code ci-dessous est partagé en licence CC BY-SA --------------
+////------------- http://creativecommons.org/licenses/by-nc-sa/3.0/fr/  ------------
+////------------------------------------------------------------ Par @GuimDev ------
+////--------------------------------------------------------------------------------
+
+console.log(">> Readline : Ok.");
+
+rl.setPrompt("> ", 2);
+rl.on("line", function(line) {
+	useCommande(line);
+	rl.history.push(line);
+	rl.prompt();
+});
+rl.on("SIGINT", function() {
+	rl.clearLine();
+	rl.question("Es-tu sûr de vouloir éteindre le listener ? ", function(answer) {
+		return (answer.match(/^o(ui)?$/i) || answer.match(/^y(es)?$/i)) ? invasionB(1) + process.exit(1) : rl.output.write("> ");
+	});
+});
+rl.prompt();
+
+var fu = function(type, args) {
+	var t = Math.ceil((rl.line.length + 3) / process.stdout.columns);
+	var text = util.format.apply(console, args);
+	rl.output.write("\r\x1B[" + t + "A\x1B[0J");
+	rl.output.write(text + "\n\r");
+	rl.output.write(Array(t).join("\r\x1B[E"));
+	rl._refreshLine();
+};
+
+console.log = function() {
+	fu("log", arguments);
+};
+console.warn = function() {
+	fu("warn", arguments);
+};
+console.info = function() {
+	fu("info", arguments);
+};
+console.error = function() {
+	fu("error", arguments);
+};
+
+function completer(line) {
+	var completions = __TAB_COMPLETIONS;
+	var hits = completions.filter(function(c) {
+		return c.indexOf(line) == 0;
+	});
+	hits = completerMore(line, hits);
+
+	if (hits.length == 1) {
+		return [hits, line];
+	} else {
+		console.log("Suggestion :");
+		var list = "",
+			l = 0,
+			t = hits.length ? hits : completions;
+		for (var i = 0; i < t.length; i++) {
+			if (list != "") {
+				list += ", ";
+			}
+			if (((list + t[i]).length + 4 - l) > process.stdout.columns) {
+				list += "\n";
+				l = list.length;
+			}
+			list += t[i];
+		}
+		console.log(list + "\n");
+		return [Array(), line];
+	}
+}
+
+////--------------------------------------------------------------------------------
+////-------------------------- Fin de la LICENCE CC BY-SA --------------------------
+////--------------------------------------------------------------------------------
+////--------------------------------------------------------------------------------
+
+////--------------------------------------------------------------------------------
+////---------- https://github.com/jjrdn/node-open/blob/master/lib/open.js ----------
+////-------------------------------------------- Copyright (c) 2012 Jay Jordan -----
+////--------------------------------------------------------------------------------
+
+function open(target, appName, callback) {
+	var opener;
+
+	if (typeof(appName) === 'function') {
+		callback = appName;
+		appName = null;
+	}
+
+	switch (process.platform) {
+		case 'darwin':
+			if (appName) {
+				opener = 'open -a "' + o_escape(appName) + '"';
+			} else {
+				opener = 'open';
+			}
+			break;
+		case 'win32':
+			// if the first parameter to start is quoted, it uses that as the title
+			// so we pass a blank title so we can quote the file we are opening
+			if (appName) {
+				opener = 'start "" "' + o_escape(appName) + '"';
+			} else {
+				opener = 'start ""';
+			}
+			break;
+		default:
+			if (appName) {
+				opener = o_escape(appName);
+			} else {
+				// use Portlands xdg-open everywhere else
+				opener = path.join(__dirname, '../vendor/xdg-open');
+			}
+			break;
+	}
+
+	return exec(opener + ' "' + o_escape(target) + '"', callback);
+}
+
+function o_escape(s) {
+	return s.replace(/"/, '\\\"');
+}
