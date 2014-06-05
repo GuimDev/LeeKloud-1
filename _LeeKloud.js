@@ -39,7 +39,7 @@ function fixASCII(data) { // Problème d'encodage, on vire le caractère 65279.
 
 function main() {
 	console.log("----------------------------------------------------------------------------");
-	console.log("------------------------------ LeeKloud 1.0.0 ------------------------------");
+	console.log("------------------------------ LeeKloud 1.0.1 ------------------------------");
 	console.log("Programme proposé par @GuimDev, certaines parties du code sont sous licence.");
 	console.log("-- En partenariat avec cfiChat : http://chat.cfillion.tk/ (programmation).--");
 	console.log("En cas de problème contactez moi sur le forum, ou MP HorsSujet (farmer=265).");
@@ -674,9 +674,9 @@ rl.prompt();
 var fu = function(type, args) {
 	var t = Math.ceil((rl.line.length + 3) / process.stdout.columns);
 	var text = util.format.apply(console, args);
-	rl.output.write("\r\x1B[" + t + "A\x1B[0J");
+	rl.output.write("\n\r\x1B[" + t + "A\x1B[0J");
 	rl.output.write(text + "\n\r");
-	rl.output.write(Array(t).join("\r\x1B[E"));
+	rl.output.write(Array(t).join("\n\r\x1B[E"));
 	rl._refreshLine();
 };
 
