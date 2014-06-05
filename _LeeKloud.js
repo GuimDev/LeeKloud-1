@@ -39,7 +39,7 @@ function fixASCII(data) { // Problème d'encodage, on vire le caractère 65279.
 
 function main() {
 	console.log("----------------------------------------------------------------------------");
-	console.log("------------------------------ LeeKloud 1.0.1 ------------------------------");
+	console.log("------------------------------ LeeKloud 1.0.2 ------------------------------");
 	console.log("Programme proposé par @GuimDev, certaines parties du code sont sous licence.");
 	console.log("-- En partenariat avec cfiChat : http://chat.cfillion.tk/ (programmation).--");
 	console.log("En cas de problème contactez moi sur le forum, ou MP HorsSujet (farmer=265).");
@@ -238,8 +238,8 @@ function successloadScript(res, data, context) {
 	} else if (__FILEHASH[id]) {
 		var files = fs.readdirSync("./");
 		for (var i = 0; i < files.length; i++) {
-			if ((new RegExp("\\[hs"+id+"\\].js$")).test(files[i])) {
-				console.log("Une IA a été renommé "+files[i]+" en "+filename+".");
+			if ((new RegExp("\\[hs" + id + "\\].js$")).test(files[i])) {
+				console.log("Une IA a été renommé " + files[i] + " en " + filename + ".");
 				fs.renameSync(files[i], filename);
 			}
 		}
@@ -477,7 +477,7 @@ function completerId(cmd, line, hits, verify) {
 
 function completerMore(line, hits) {
 	if (hits.length == 1) {
-		rl.line = line = hits[0];
+		line = hits[0];
 	}
 	hits = completerId(".backup ", line, hits, function(id, index) {
 		return (__FILEBACK[index] == id);
@@ -528,6 +528,7 @@ function sha256(data) {
 }
 
 var __HIDDEN_PLAY = false;
+
 function hidden(query, callback) {
 	var stdin = process.openStdin(),
 		i = 0;
