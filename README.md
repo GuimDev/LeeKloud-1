@@ -5,6 +5,6 @@ Une API pour synchroniser vos IA qui sont sur votre ordinateur avec le site leek
 
 Pour l'utiliser installer [nodejs](http://nodejs.org/).
 
-Ensuite lancé cette commande :
+Ensuite lancï¿½ cette commande :
 
     node _LeeKloud.js
