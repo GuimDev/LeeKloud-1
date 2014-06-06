@@ -32,3 +32,6 @@ Modifier la variable `compare_cmd` ligne 21 pour pouvoir utiliser la fonction 'c
 Sous windows, si vous avez un problème avec `.open [id]`, vous devez d'abord choisir un éditeur par defaut pour les fichiers ".js".
 
 Pour définir un programme par défaut : Clique droit sur un fichier ".js" > "Ouvrir avec..." > "Choisir un programme par défaut...".
+
+
+A voir aussi : https://github.com/GuimDev/LeekScript-Sublime
