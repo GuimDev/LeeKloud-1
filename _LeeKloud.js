@@ -165,7 +165,7 @@ function sendScript(id, forceUpdate) {
 					console.log("L'envoie de \033[36m" + getFilename(context.id) + "\033[00m " + ((data.success) ? "réussi" : "echoué") + ".");
 					if (data.success) {
 						console.log("Niveau : " + data.level + " Coeur : " + data.core);
-					} else { // Gestion des erreurs :
+					} else if (data.error && data.line && data.char) { // Gestion des erreurs :
 						console.log(" ");
 						var codeline = code.replace(/\t/g, "    ").split("\n"),
 							l = parseInt(data.line),
@@ -177,6 +177,8 @@ function sendScript(id, forceUpdate) {
 						}
 						console.log(Array(pos).join(" ") + "\033[91m^\033[00m");
 						console.log("Error: " + data.error + " (ligne : " + data.line + ", caract : " + data.char + ").");
+					} else {
+						console.log("Le serveur retourne une erreur. Merci de reessayer (problème avec le site).");
 					}
 				}
 			});
