@@ -238,15 +238,20 @@ function successloadScript(res, data, context) {
 		}
 		__FILEHASH[id].filehash = sha256(getFileContent(filename));
 	} else if (__FILEHASH[id]) {
-		var files = fs.readdirSync("./");
+		var files = fs.readdirSync("./"),
+			exist = false;
 		for (var i = 0; i < files.length; i++) {
 			if ((new RegExp("\\[hs" + id + "\\].js$")).test(files[i])) {
 				console.log("Une IA a été renommé " + files[i] + " en " + filename + ".");
 				fs.renameSync(files[i], filename);
+				exist = true;
+				break;
 			}
 		}
-	} else {
-		delete __FILEHASH[id];
+
+		if (!exist) {
+			delete __FILEHASH[id];
+		}
 	}
 
 	var thash = __FILEHASH[id];
