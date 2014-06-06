@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+process.title = "LeeKloud";
 process.stdout.write("\x1Bc");
 
 var readline = require('readline'),
@@ -93,9 +94,12 @@ function main() {
 setTimeout(main, 10);
 
 function nextStep() {
-	console.log(process.argv);
 	if (process.argv.length > 2) {
-		//process.exit(1);
+		//Test IA << HERE >>
+
+		setTimeout(function () {
+			process.exit(1);
+		}, 1200);
 	}
 
 	getScripts();
