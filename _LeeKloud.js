@@ -71,7 +71,7 @@ function main() {
 							myCookie = dataCookieToString(dataCookie);
 							console.log("Connexion réussite.");
 
-							getScripts();
+							nextStep();
 						} else {
 							console.log("Connexion échouée.");
 							process.exit();
@@ -86,11 +86,20 @@ function main() {
 		myCookie = dataCookieToString(dataCookie);
 		console.log("Connexion automatique.");
 
-		getScripts();
+		nextStep();
 	}
 }
 
 setTimeout(main, 10);
+
+function nextStep() {
+	console.log(process.argv);
+	if (process.argv.length > 2) {
+		//process.exit(1);
+	}
+
+	getScripts();
+}
 
 function getScripts() {
 	if (fs.existsSync(".temp/hash")) {
@@ -126,7 +135,7 @@ function getFilename(id) {
 	name = name.replace(/ ?[&|] ?/g, "'n'");
 	name = name.replace(/[\/\\:*?"<>&|]/g, "");
 
-	return name + "[hs" + id + "].js";
+	return name + "[hs" + id + "].lk.js";
 }
 
 function getFilenameBackup(filename) {
@@ -243,7 +252,7 @@ function successloadScript(res, data, context) {
 		var files = fs.readdirSync("./"),
 			exist = false;
 		for (var i = 0; i < files.length; i++) {
-			if ((new RegExp("\\[hs" + id + "\\].js$")).test(files[i])) {
+			if ((new RegExp("\\[hs" + id + "\\]\.([A-z.]{2,9})$")).test(files[i])) {
 				console.log("Une IA a été renommé " + files[i] + " en " + filename + ".");
 				fs.renameSync(files[i], filename);
 				exist = true;
