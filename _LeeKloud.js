@@ -350,6 +350,13 @@ function backup_change(action, filename, id, data) {
 	__FILEBACK[__AI_IDS.indexOf(id)] = id;
 }
 
+function showListIA() {
+	console.log("Liste des IA :");
+	__AI_IDS.forEach(function(id, index) {
+		console.log("- \033[36m" + id + "\033[00m : \033[36m" + __AI_NAMES[index] + "\033[00m.");
+	});
+}
+
 function useCommande(line) {
 	var commande = line.split(" ");
 	if (commande[0] == ".backup") {
@@ -386,11 +393,7 @@ function useCommande(line) {
 			sendScript(id, true);
 			console.log("Mise à jour de l'IA n°\033[36m" + id + "\033[00m, \033[36m" + __AI_NAMES[index] + "\033[00m.");
 		} else {
-			console.log("Liste des IA :");
-			__AI_IDS.forEach(function(id, index) {
-
-				console.log("- \033[36m" + id + "\033[00m : \033[36m" + __AI_NAMES[index] + "\033[00m.");
-			});
+			showListIA();
 		}
 	} else if (commande[0] == ".open") {
 		var id = parseInt(commande[1]),
@@ -400,11 +403,7 @@ function useCommande(line) {
 			open(getFilename(id));
 			console.log("Ouverture de l'IA n°\033[36m" + id + "\033[00m, \033[36m" + __AI_NAMES[index] + "\033[00m.");
 		} else {
-			console.log("Liste des IA :");
-			__AI_IDS.forEach(function(id, index) {
-
-				console.log("- \033[36m" + id + "\033[00m : \033[36m" + __AI_NAMES[index] + "\033[00m.");
-			});
+			showListIA();
 		}
 	} else if (commande[0] == ".compare") {
 		var ids = [parseInt(commande[1]), parseInt(commande[2])],
@@ -415,11 +414,32 @@ function useCommande(line) {
 
 			console.log("Comparaison de l'IA n°\033[36m" + ids[0] + "\033[00m et n°\033[36m" + ids[1] + "\033[00m, \033[36m" + __AI_NAMES[index[0]] + "\033[00m et \033[36m" + __AI_NAMES[index[1]] + "\033[00m.");
 		} else {
-			console.log("Liste des IA :");
-			__AI_IDS.forEach(function(id, index) {
+			showListIA();
+		}
+	} else if (commande[0] == ".rename") {
+		var id = parseInt(commande[1]),
+			index = __AI_IDS.indexOf(id);
 
-				console.log("- \033[36m" + id + "\033[00m : \033[36m" + __AI_NAMES[index] + "\033[00m.");
-			});
+		if (index != -1) {
+			if (commande[2]) {
+				$.post({
+					url: "/index.php?page=editor_update",
+					data: {
+						color: 0,
+						id: id,
+						name: commande[2],
+						save: true,
+						token: __TOKEN,
+					},
+					success: function(res, data) {
+						console.log("Le changement " + ((JSON.parse(data)) ? "a" : "\033[91mn'\033[00ma \033[91mpas\033[00m") + " été accepté par le serveur.");
+					}
+				});
+			} else {
+				console.log("C'est bien de vouloir renommer son IA, mais faut peut-être choisir un nouveau nom. - Après moi je dis ça... :B");
+			}
+		} else {
+			showListIA();
 		}
 	} else if (["help", "?", ".help", "/?"].indexOf(commande[0]) != -1) {
 		console.log("Aide :");
@@ -427,6 +447,7 @@ function useCommande(line) {
 		console.log("\033[97m.forceupdate [id]\033[00m : Forcer l'envoie de l'IA.");
 		console.log("\033[97m.open [id]\033[00m : Ouvre l'IA.");
 		console.log("\033[97m.compare [id1] [id2]\033[00m : Compare deux fichiers.");
+		console.log("\033[97m.rename [id] [name]\033[00m : Change le nom de l'IA.");
 		console.log("Autres :\n{ \033[97mtwitter / cfichat / forum / MP / leek / doc\033[00m }".replace(/ \/ /g, "\033[00m / \033[97m"));
 		console.log("Astuces :");
 		console.log("- Si on vous demande de taper \"\033[97m.backup [id]\033[00m\", essayez la flèche du haut.");
@@ -498,11 +519,17 @@ function completerMore(line, hits) {
 	hits = completerId(".compare ", line, hits, function(id, index) {
 		return true;
 	});
+	hits = completerId(".rename ", line, hits, function(id, index) {
+		return true;
+	});
 
-	return hits;
+	return {
+		line: line,
+		hits: hits
+	};
 }
 
-var __TAB_COMPLETIONS = [".help", ".backup ", ".forceupdate ", ".open ", ".compare "].concat("twitter / cfichat / forum / MP / leek / doc ".split(" / "));
+var __TAB_COMPLETIONS = [".help", ".backup ", ".forceupdate ", ".open ", ".compare ", ".rename "].concat("twitter / cfichat / forum / MP / leek / doc ".split(" / "));
 
 ////--------------------------------------------------------------------------------
 ////--------------------------------------------------------------------------------
@@ -682,9 +709,9 @@ rl.prompt();
 var fu = function(type, args) {
 	var t = Math.ceil((rl.line.length + 3) / process.stdout.columns);
 	var text = util.format.apply(console, args);
-	rl.output.write("\n\r\x1B[" + t + "A\x1B[0J");
-	rl.output.write(text + "\n\r");
-	rl.output.write(Array(t).join("\n\r\x1B[E"));
+	rl.output.write("\n\x1B[" + t + "A\x1B[0J");
+	rl.output.write(text + "\n");
+	rl.output.write(Array(t).join("\n\x1B[E"));
 	rl._refreshLine();
 };
 
@@ -706,27 +733,31 @@ function completer(line) {
 	var hits = completions.filter(function(c) {
 		return c.indexOf(line) == 0;
 	});
-	hits = completerMore(line, hits);
+	var b = completerMore(line, hits),
+		a = (line != b.line) ? [b.line] : [];
 
+	hits = b.hits;
 	if (hits.length == 1) {
 		return [hits, line];
 	} else {
 		console.log("Suggestion :");
 		var list = "",
 			l = 0,
+			c = "",
 			t = hits.length ? hits : completions;
 		for (var i = 0; i < t.length; i++) {
+			c = t[i].replace(" ", "")
 			if (list != "") {
 				list += ", ";
 			}
-			if (((list + t[i]).length + 4 - l) > process.stdout.columns) {
+			if (((list + c).length + 4 - l) > process.stdout.columns) {
 				list += "\n";
 				l = list.length;
 			}
-			list += t[i];
+			list += c;
 		}
 		console.log(list + "\n");
-		return [Array(), line];
+		return [a, line];
 	}
 }
 
