@@ -135,7 +135,7 @@ function getFilename(id) {
 	name = name.replace(/ ?[&|] ?/g, "'n'");
 	name = name.replace(/[\/\\:*?"<>&|]/g, "");
 
-	return name + "[hs" + id + "].lk.js";
+	return name + "[hs" + id + "].js.lk";
 }
 
 function getFilenameBackup(filename) {
@@ -709,6 +709,9 @@ rl.on("line", function(line) {
 	rl.history.push(line);
 	rl.prompt();
 });
+rl.on('close', function() {
+	return invasionB(1) + process.exit(1);
+});
 rl.on("SIGINT", function() {
 	rl.clearLine();
 	rl.question("Es-tu sûr de vouloir éteindre le listener ? ", function(answer) {
@@ -757,7 +760,7 @@ function completer(line) {
 			c = "",
 			t = hits.length ? hits : completions;
 		for (var i = 0; i < t.length; i++) {
-			c = t[i].replace(" ", "")
+			c = t[i].replace(/(\s*)$/g, "")
 			if (list != "") {
 				list += ", ";
 			}
