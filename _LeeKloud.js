@@ -429,7 +429,7 @@ function useCommande(line) {
 					data: {
 						color: 0,
 						id: id,
-						name: commande[2],
+						name: commande.slice(2).join(" "),
 						save: true,
 						token: __TOKEN,
 					},
