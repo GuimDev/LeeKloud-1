@@ -41,7 +41,7 @@ function fixASCII(data) { // Problème d'encodage, on vire le caractère 65279.
 
 function main() {
 	console.log("----------------------------------------------------------------------------");
-	console.log("------------------------------ LeeKloud 1.0.2 ------------------------------");
+	console.log("------------------------------ LeeKloud 1.0.5 ------------------------------");
 	console.log("Programme proposé par @GuimDev, certaines parties du code sont sous licence.");
 	console.log("-- En partenariat avec cfiChat : http://chat.cfillion.tk/ (programmation).--");
 	console.log("En cas de problème contactez moi sur le forum, ou MP HorsSujet (farmer=265).");
@@ -454,7 +454,7 @@ function useCommande(line) {
 		console.log("Astuces :");
 		console.log("- Si on vous demande de taper \"\033[97m.backup [id]\033[00m\", essayez la flèche du haut.");
 		console.log("- Essayez la touche tabulation lors de la saisie d'une commande.");
-		console.log("- Modifier la variable compare_cmd ligne 24 pour pouvoir utiliser la fonction 'compare'.");
+		console.log("- Modifier la variable compare_cmd ligne 21 pour pouvoir utiliser la fonction 'compare'.");
 	} else if (commande[0] == "cfichat") {
 		console.log("cfiChat : canal de discussion (HomeMade) - Programmation");
 		open("http://chat.cfillion.tk/");
