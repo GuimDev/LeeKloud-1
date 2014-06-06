@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 process.stdout.write("\x1Bc");
 
 var readline = require('readline'),
@@ -7,8 +8,8 @@ var readline = require('readline'),
 	http = require('http'),
 	fs = require('fs'),
 	crypto = require('crypto'),
-	path = require('path')
-util = require('util');
+	path = require('path'),
+	util = require('util');
 
 var rl = readline.createInterface({
 	input: process.stdin,
