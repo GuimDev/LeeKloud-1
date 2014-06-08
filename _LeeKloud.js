@@ -66,8 +66,9 @@ function main() {
 					},
 					success: function(res, data) {
 						if (data == "0") {
+							setFileContent(".temp/cookie", data);
 							var dataCookie = mkdataCookie(res.headers["set-cookie"]);
-							fs.writeFileSync(".temp/cookie", JSON.stringify(dataCookie));
+							setFileContent(".temp/cookie", JSON.stringify(dataCookie));
 
 							myCookie = dataCookieToString(dataCookie);
 							console.log("Connexion réussite.");
@@ -93,13 +94,18 @@ function main() {
 
 setTimeout(main, 10);
 
+var _IAfolder = "IA/";
+
 function nextStep() {
 	if (process.argv.length > 2) {
 		//Test IA << HERE >>
 
-		setTimeout(function () {
+		setTimeout(function() {
 			process.exit(1);
 		}, 1200);
+	}
+	if (!fs.existsSync(_IAfolder)) {
+		fs.mkdirSync(_IAfolder);
 	}
 
 	getScripts();
@@ -150,27 +156,78 @@ function getFileContent(filename) {
 	return fixASCII(fs.readFileSync(filename).toString());
 }
 
+function setFileContent(filename, data) {
+	return fs.writeFileSync(filename, data);
+}
+
+function __IA(id) {
+	this.id = id;
+	this.index = __AI_IDS.indexOf(id);
+	this.name = __AI_NAMES[this.index];
+	this.filename = getFilename(id);
+
+	this.filepath = _IAfolder + this.filename;
+
+	this.getIAData = function() {
+		return getFileContent(this.filepath);
+	};
+
+	this.setIAData = function(data) {
+		return setFileContent(this.filepath, data);
+	};
+
+	this.getHash = function() {
+		return sha256(this.getIAData());
+	};
+
+	this.scandir = function() {
+		var files = fs.readdirSync(_IAfolder),
+			exist = false;
+
+		for (var i = 0; i < files.length; i++) {
+			if ((new RegExp("\\[hs" + this.id + "\\]\.([A-z.]{2,9})$")).test(files[i])) {
+				console.log("Une IA a été renommé " + files[i] + " en " + this.filename + ".");
+				fs.renameSync(files[i], this.filename);
+				return true;
+			}
+		}
+
+		return false;
+	};
+
+	this.syncWithServer = function(data) {
+		this.setIAData(data);
+
+		var hash = this.getHash();
+		__FILEHASH[this.id] = {
+			lasthash: hash,
+			filehash: hash
+		};
+	};
+}
+
 function sendScript(id, forceUpdate) {
 	forceUpdate = (forceUpdate) ? true : false;
 	loadScript(id, __AI_IDS.indexOf(id), function(res, data, context) {
-		var filename = getFilename(id),
+		var myIA = new __IA(id),
 			serverhash = sha256(data),
-			code = getFileContent(filename);
+			code = myIA.getIAData(),
+			myhash = myIA.getHash();
 
-		__FILEHASH[id].filehash = sha256(code);
+		__FILEHASH[id].filehash = myhash;
 
 		if (__FILEHASH[id].lasthash == serverhash || forceUpdate) {
-			__FILEHASH[id].lasthash = __FILEHASH[id].filehash;
+			__FILEHASH[id].lasthash = myhash;
 			$.post({
 				url: "/index.php?page=editor_update",
 				data: {
-					id: id,
+					id: myIA.id,
 					compile: true,
 					token: __TOKEN,
 					code: code
 				},
 				context: {
-					id: id
+					id: myIA.id
 				},
 				success: function(res, data, context) {
 					data = JSON.parse(data);
@@ -191,14 +248,14 @@ function sendScript(id, forceUpdate) {
 						console.log(Array(pos).join(" ") + "\033[91m^\033[00m");
 						console.log("Error: " + data.error + " (ligne : " + data.line + ", caract : " + data.char + ").");
 					} else {
-						console.log("Le serveur retourne une erreur. Merci de reessayer (problème avec le site).");
+						console.log("Le serveur retourne une erreur inconnu. Compilation ? Problème lors de l'envois ?");
 					}
 				}
 			});
-			fs.writeFileSync(".temp/hash", JSON.stringify(__FILEHASH));
+			setFileContent(".temp/hash", JSON.stringify(__FILEHASH));
 		} else {
-			console.log("La version du serveur est différente, elle a été changé depuis le dernier téléchargement. Forcez l'envois avec la commande \"\033[97m.forceupdate " + id + "\033[00m\".");
-			rl.history.push(".forceupdate " + id);
+			console.log("La version du serveur est différente, elle a été changé depuis le dernier téléchargement. Forcez l'envois avec la commande \"\033[97m.forceupdate " + myIA.id + "\033[00m\".");
+			rl.history.push(".forceupdate " + myIA.id);
 		}
 	});
 }
@@ -210,17 +267,16 @@ function alignLine(num, text, longer) {
 
 function loadScript(value, index, success) {
 	console.log("- Requête pour \033[36m" + __AI_NAMES[index] + "\033[00m.");
+	var myIA = new __IA(value);
 	$.post({
 		url: "/index.php?page=editor_update",
 		data: {
-			id: value,
+			id: myIA.id,
 			load: true,
 			token: __TOKEN
 		},
 		context: {
-			id: value,
-			name: __AI_NAMES[index],
-			index: index
+			id: myIA.id
 		},
 		success: function(res, data, context) {
 			// Reprise de la modif de Pilow : "Là y'a un souci, le code présente une ligne de plus :/ On la dégage"
@@ -235,41 +291,25 @@ function successloadScript(res, data, context) {
 		return;
 	}
 
-	var name = context.name,
-		id = context.id,
-		index = context.index;
-
-
-	var filename = getFilename(id),
+	var myIA = new __IA(context.id),
 		serverhash = sha256(data),
 		type = "",
 		action = "";
 
-	if (fs.existsSync(filename)) {
-		if (!__FILEHASH[id]) {
-			__FILEHASH[id] = {
+	if (fs.existsSync(myIA.filepath)) {
+		if (!__FILEHASH[myIA.id]) {
+			__FILEHASH[myIA.id] = {
 				lasthash: 12
 			};
 		}
-		__FILEHASH[id].filehash = sha256(getFileContent(filename));
-	} else if (__FILEHASH[id]) {
-		var files = fs.readdirSync("./"),
-			exist = false;
-		for (var i = 0; i < files.length; i++) {
-			if ((new RegExp("\\[hs" + id + "\\]\.([A-z.]{2,9})$")).test(files[i])) {
-				console.log("Une IA a été renommé " + files[i] + " en " + filename + ".");
-				fs.renameSync(files[i], filename);
-				exist = true;
-				break;
-			}
-		}
-
-		if (!exist) {
-			delete __FILEHASH[id];
+		__FILEHASH[myIA.id].filehash = myIA.getHash();
+	} else if (__FILEHASH[myIA.id]) {
+		if (!myIA.scandir()) {
+			delete __FILEHASH[myIA.id];
 		}
 	}
 
-	var thash = __FILEHASH[id];
+	var thash = __FILEHASH[myIA.id];
 	if (!thash) {
 		type = "\033[96mCreation";
 		action = 1;
@@ -294,23 +334,19 @@ function successloadScript(res, data, context) {
 
 	console.log(" ");
 	if (action === 1 || action === 4) {
-		console.log("- Téléchargement de \033[36m" + filename + "\033[00m (fichier distant plus récent).");
+		console.log("- Téléchargement de \033[36m" + myIA.filename + "\033[00m (fichier distant plus récent).");
 		if (action === 4) {
-			backup_change(action, filename, id);
+			backup_change(action, myIA.id);
 		}
-		fs.writeFileSync(filename, data);
-		__FILEHASH[id] = {
-			lasthash: serverhash,
-			filehash: serverhash
-		};
+		myIA.syncWithServer(data);
 	} else if (action === 2 || action === 3) {
-		console.log("- Envoie de \033[36m" + filename + "\033[00m (fichier local plus récent).");
-		sendScript(id, true);
+		console.log("- Envoie de \033[36m" + myIA.filename + "\033[00m (fichier local plus récent).");
+		sendScript(myIA.id, true);
 		if (action === 3) {
-			backup_change(action, filename, id, data);
+			backup_change(action, myIA.id, data);
 		}
 	} else if (action === 0) {
-		console.log("- \033[36m" + filename + "\033[00m.");
+		console.log("- \033[36m" + myIA.filename + "\033[00m.");
 	} else {
 		console.log("\033[91mSi tu me vois dis le sur le forum (err:3).\033[00m");
 	}
@@ -320,23 +356,23 @@ function successloadScript(res, data, context) {
 	if (__fileload++ && __fileload >= __AI_IDS.length) {
 		console.log(" \n>> Tous les téléchargements sont terminés.\n");
 	}
-	fs.writeFileSync(".temp/hash", JSON.stringify(__FILEHASH));
+	setFileContent(".temp/hash", JSON.stringify(__FILEHASH));
 
-	fs.stat(filename, function(err, stats) {
-		__FILEMTIME[id] = new Date(stats.mtime).getTime();
+	fs.stat(myIA.filepath, function(err, stats) {
+		__FILEMTIME[myIA.id] = new Date(stats.mtime).getTime();
 	});
 
-	fs.watch(filename, function(event, filename) {
+	fs.watch(myIA.filepath, function(event, filename) {
 		if (filename && event == "change") {
 			fs.stat(filename, function(err, stats) {
 				var mtime = new Date(stats.mtime).getTime(),
 					hash = sha256(getFileContent(filename));
-				if (__FILEMTIME[id] != mtime && __FILEHASH[id].filehash != hash) {
+				if (__FILEMTIME[myIA.id] != mtime && __FILEHASH[myIA.id].filehash != hash) {
 					console.log("\033[36m" + filename + "\033[00m a changé.");
-					__FILEHASH[id].filehash = hash;
-					sendScript(id, false);
+					__FILEHASH[myIA.id].filehash = hash;
+					sendScript(myIA.id, false);
 				}
-				__FILEMTIME[id] = mtime;
+				__FILEMTIME[myIA.id] = mtime;
 			});
 		}
 	});
@@ -346,23 +382,24 @@ var $ = {
 	get: get
 };
 
-function backup_change(action, filename, id, data) {
-	var localapplique = (action == 3) ? true : false;
+function backup_change(action, id, data) {
+	var localapplique = (action == 3) ? true : false,
+		myIA = new __IA(id);
 
 	var applique = (localapplique) ? "\033[92mversion locale" : "\033[96mversion distante",
 		backup = (localapplique) ? "\033[96mversion distante" : "\033[92mversion locale";
 
 	if (action == 3) {
-		fs.writeFileSync(".temp/backup/" + filename + ".back.js", data);
+		setFileContent(".temp/backup/" + myIA.filename + ".back.js", data);
 	} else if (action == 4) {
-		fs.writeFileSync(".temp/backup/" + filename + ".back.js", getFileContent(filename));
+		setFileContent(".temp/backup/" + myIA.filename + ".back.js", myIA.getIAData());
 	} else {
 		return console.log("\033[91mSi tu me vois dis le sur le forum (err:4).\033[00m");
 	}
-	console.log("- La " + applique + "\033[00m a été appliqué, vous pouvez choisir la " + backup + "\033[00m avec la commande \"\033[97m.backup " + id + "\033[00m\".");
+	console.log("- La " + applique + "\033[00m a été appliqué, vous pouvez choisir la " + backup + "\033[00m avec la commande \"\033[97m.backup " + myIA.id + "\033[00m\".");
 
-	rl.history.push(".backup " + id + " restore");
-	__FILEBACK[__AI_IDS.indexOf(id)] = id;
+	rl.history.push(".backup " + myIA.id + " restore");
+	__FILEBACK[myIA.index] = myIA.id;
 }
 
 function showListIA() {
@@ -379,21 +416,21 @@ function useCommande(line) {
 			index = __AI_IDS.indexOf(id);
 
 		if (index != -1 && __FILEBACK[index] == id) {
-			var filename = getFilename(id),
+			var myIA = new __IA(id),
 				filenameback = getFilenameBackup(filename);
 
 			if (commande[2] == "restore") {
 				var backup = "";
-				console.log("Le backup de \033[36m" + filename + "\033[00m a été restauré. Vous pouvez réutiliser la précédente commande si vous changez d'avis.");
-				backup = getFileContent(filenameback);
-				fs.writeFileSync(filenameback, getFileContent(filename));
-				fs.writeFileSync(filename, backup);
+				console.log("Le backup de \033[36m" + myIA.filename + "\033[00m a été restauré. Vous pouvez réutiliser la précédente commande si vous changez d'avis.");
+				backup = myIA.getIAData(filenameback);
+				setFileContent(filenameback, myIA.getIAData());
+				myIA.setIAData(backup);
 			} else if (commande[2] == "open") {
-				console.log("Le backup de \033[36m" + filename + "\033[00m a été ouvert.");
+				console.log("Le backup de \033[36m" + myIA.filename + "\033[00m a été ouvert.");
 				open(filenameback);
 			} else if (commande[2] == "compare") {
-				exec(util.format(compare_cmd, o_escape(path.resolve(filename)), o_escape(path.resolve(filenameback))));
-				console.log("Comparaison entre \"\033[36m" + filename + "\033[00m\" et \"\033[36m" + filenameback + "\033[00m\".");
+				exec(util.format(compare_cmd, o_escape(path.resolve(myIA.filename)), o_escape(path.resolve(filenameback))));
+				console.log("Comparaison entre \"\033[36m" + myIA.filename + "\033[00m\" et \"\033[36m" + filenameback + "\033[00m\".");
 			} else {
 				console.log("Merci de préciser la sous-commande : .backup [id] {restore / open / compare.}");
 			}
@@ -415,8 +452,9 @@ function useCommande(line) {
 			index = __AI_IDS.indexOf(id);
 
 		if (index != -1) {
-			open(getFilename(id));
-			console.log("Ouverture de l'IA n°\033[36m" + id + "\033[00m, \033[36m" + __AI_NAMES[index] + "\033[00m.");
+			var myIA = new __IA(id);
+			open(myIA.filepath);
+			console.log("Ouverture de l'IA n°\033[36m" + id + "\033[00m, \033[36m" + myIA.filename + "\033[00m.");
 		} else {
 			showListIA();
 		}
@@ -425,9 +463,10 @@ function useCommande(line) {
 			index = [__AI_IDS.indexOf(ids[0]), __AI_IDS.indexOf(ids[1])];
 
 		if (index[0] != -1 && index[1] != -1) {
-			exec(util.format(compare_cmd, o_escape(path.resolve(getFilename(ids[0]))), o_escape(path.resolve(getFilename(ids[1])))));
+			var myIAs = [new __IA(ids[0]), new __IA(ids[1])];
+			exec(util.format(compare_cmd, o_escape(path.resolve(myIAs[0].filepath)), o_escape(path.resolve(myIAs[1].filepath))));
 
-			console.log("Comparaison de l'IA n°\033[36m" + ids[0] + "\033[00m et n°\033[36m" + ids[1] + "\033[00m, \033[36m" + __AI_NAMES[index[0]] + "\033[00m et \033[36m" + __AI_NAMES[index[1]] + "\033[00m.");
+			console.log("Comparaison de l'IA n°\033[36m" + myIAs[0].id + "\033[00m et n°\033[36m" + myIAs[1].id + "\033[00m, \033[36m" + myIAs[0].name + "\033[00m et \033[36m" + myIAs[1].name + "\033[00m.");
 		} else {
 			showListIA();
 		}
@@ -642,7 +681,7 @@ function ajax(option) {
 		});
 
 		res.on('end', function() {
-			fs.writeFileSync(".temp/debug_print_r.js", print_r(res));
+			setFileContent(".temp/debug_print_r.js", print_r(res));
 			if (option.success) {
 				option.success(res, fixASCII(content), context);
 			}
