@@ -21,9 +21,12 @@ var rl = readline.createInterface({
 // Modifier cette commande par la votre. (WinMerge permet de comparer deux fichiers sous Windows).
 var compare_cmd = '"C:\\Program Files (x86)\\WinMerge\\WinMergeU.exe" "%s" "%s"';
 
-var __AI_IDS = [],
+var __AI_CORES = [],
+	__AI_IDS = [],
+	__AI_LEVELS = [],
 	__AI_NAMES = [],
-	__TOKEN = "";
+	__TOKEN = "",
+	__LEEK_IDS = [];
 
 var __FILEHASH = [],
 	__FILEBACK = [],
@@ -98,11 +101,30 @@ var _IAfolder = "IA/";
 
 function nextStep() {
 	if (process.argv.length > 2) {
-		//Test IA << HERE >>
-
-		setTimeout(function() {
-			process.exit(1);
-		}, 1200);
+		var match = process.argv[2].match("\\[hs([0-9]+)\\]\.[A-z.]{2,9}$");
+		__LEEK_IDS = JSON.parse(getFileContent(".temp/leeks"));
+		if (match[1]) {
+			$.post({
+				url: "/index.php?page=editor_update",
+				data: {
+					id: match[1],
+					leek1: 2,
+					myleek: __LEEK_IDS[0],
+					test: true,
+					"test-type": "solo",
+					token: getFileContent(".temp/token")
+				},
+				context: {
+					id: match[1]
+				},
+				success: function(res, data, context) {
+					open("http://leekwars.com/fight=" + data);
+				}
+			});
+			setTimeout(function() {
+				process.exit(1);
+			}, 1200);
+		}
 	}
 	if (!fs.existsSync(_IAfolder)) {
 		fs.mkdirSync(_IAfolder);
@@ -125,9 +147,20 @@ function getScripts() {
 				return process.exit();
 			}
 
+			__AI_CORES = JSON.parse(data.match(/<script>__AI_CORES = (.*?);<\/script>/)[1]);
 			__AI_IDS = JSON.parse(data.match(/<script>__AI_IDS = (.*?);<\/script>/)[1]);
+			__AI_LEVELS = JSON.parse(data.match(/<script>__AI_LEVELS = (.*?);<\/script>/)[1]);
 			__AI_NAMES = JSON.parse(data.match(/<script>__AI_NAMES = (.*?);<\/script>/)[1]);
 			__TOKEN = data.match(/<script>var __TOKEN = '(.*?)';<\/script>/)[1];
+			setFileContent(".temp/token", __TOKEN);
+
+			__LEEK_IDS = data.match(/<div id='([0-9]+)' class='leek myleek'>/g);
+			if (__LEEK_IDS) {
+				__LEEK_IDS.forEach(function(value, index) {
+					__LEEK_IDS[index] = parseInt(value.match(/id='([0-9]+)'/)[1]);
+				});
+				setFileContent(".temp/leeks", JSON.stringify(__LEEK_IDS));
+			}
 
 			console.log("\n>> Téléchargements...");
 			__AI_IDS.forEach(function(value, index) {
@@ -185,7 +218,7 @@ function __IA(id) {
 			exist = false;
 
 		for (var i = 0; i < files.length; i++) {
-			if ((new RegExp("\\[hs" + this.id + "\\]\.([A-z.]{2,9})$")).test(files[i])) {
+			if ((new RegExp("\\[hs" + this.id + "\\]\.[A-z.]{2,9}$")).test(files[i])) {
 				console.log("Une IA a été renommé " + files[i] + " en " + this.filename + ".");
 				fs.renameSync(files[i], this.filename);
 				return true;
@@ -363,6 +396,7 @@ function successloadScript(res, data, context) {
 	});
 
 	fs.watch(myIA.filepath, function(event, filename) {
+		filename = _IAfolder + filename;
 		if (filename && event == "change") {
 			fs.stat(filename, function(err, stats) {
 				var mtime = new Date(stats.mtime).getTime(),
