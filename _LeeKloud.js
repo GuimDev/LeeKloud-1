@@ -45,7 +45,7 @@ function fixASCII(data) { // Problème d'encodage, on vire le caractère 65279.
 
 function main() {
 	console.log("----------------------------------------------------------------------------");
-	console.log("------------------------------ LeeKloud 1.0.5 ------------------------------");
+	console.log("------------------------------ LeeKloud 1.0.6 ------------------------------");
 	console.log("Programme proposé par @GuimDev, certaines parties du code sont sous licence.");
 	console.log("-- En partenariat avec cfiChat : http://chat.cfillion.tk/ (programmation).--");
 	console.log("En cas de problème contactez moi sur le forum, ou MP HorsSujet (farmer=265).");
