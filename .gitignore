@@ -1,4 +1,6 @@
 .temp/
+IA/
+Workspace/
 *.js
 *.lk
 *.lnk

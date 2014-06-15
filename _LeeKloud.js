@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var _Vname = "LeeKloud 1.0.6";
+var _Vname = "LeeKloud 1.1.0";
 
 process.title = _Vname;
 process.stdout.write("\x1Bc");
@@ -223,7 +223,7 @@ function __IA(id) {
 		for (var i = 0; i < files.length; i++) {
 			if ((new RegExp("\\[hs" + this.id + "\\]\.[A-z.]{2,9}$")).test(files[i])) {
 				console.log("Une IA a été renommé " + files[i] + " en " + this.filename + ".");
-				fs.renameSync(files[i], this.filename);
+				fs.renameSync(_IAfolder + files[i], this.filepath);
 				return true;
 			}
 		}

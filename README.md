@@ -1,4 +1,4 @@
-﻿LeeKloud 1.0.6
+﻿LeeKloud 1.1.0
 ========
 
 Une API pour synchroniser vos IA qui sont sur votre ordinateur avec le site leekwars.com.
