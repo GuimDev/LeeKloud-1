@@ -79,7 +79,6 @@ function main() {
 					},
 					success: function(res, data) {
 						if (data == "0") {
-							setFileContent(".temp/cookie", data);
 							var dataCookie = mkdataCookie(res.headers["set-cookie"]);
 							setFileContent(".temp/cookie", JSON.stringify(dataCookie));
 
