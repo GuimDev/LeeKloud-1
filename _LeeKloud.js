@@ -119,7 +119,7 @@ function nextStep() {
 					myleek: __LEEK_IDS[0],
 					test: true,
 					"test-type": "solo",
-					token: getFileContent(".temp/token")
+					token: __TOKEN
 				},
 				context: {
 					id: match[1]
