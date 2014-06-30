@@ -110,6 +110,7 @@ function nextStep() {
 	if (process.argv.length > 2) {
 		var match = process.argv[2].match("\\[hs([0-9]+)\\]\.[A-z.]{2,9}$");
 		__LEEK_IDS = JSON.parse(getFileContent(".temp/leeks"));
+		__TOKEN = getFileContent(".temp/token");
 		if (!match) {
 			console.log("Fichier invalide. N'essaye pas de me troller ! :B")
 		} else if (match[1]) {
