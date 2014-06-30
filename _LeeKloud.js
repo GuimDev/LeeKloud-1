@@ -55,6 +55,7 @@ function fixASCII(data) { // Problème d'encodage, on vire le caractère 65279.
 		fs.mkdirSync(folder);
 	}
 	process.chdir(folder);
+	open(folder);
 })(process.env.HOME || process.env.APPDATA || process.env.USERPROFILE || process.env.HOMEPATH);
 
 function main() {
