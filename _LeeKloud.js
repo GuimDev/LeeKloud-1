@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var _Vname = "LeeKloud 1.1.2";
+var _Vname = "LeeKloud 1.1.4";
 
 process.title = _Vname;
 process.stdout.write("\x1Bc");
@@ -48,6 +48,14 @@ function fixASCII(data) { // Problème d'encodage, on vire le caractère 65279.
 	}
 	return data;
 }
+
+(function (folder) {
+	folder += "/.LeeKloud/";
+	if (!fs.existsSync(folder)) {
+		fs.mkdirSync(folder);
+	}
+	process.chdir(folder);
+})(process.env.HOME || process.env.APPDATA || process.env.USERPROFILE || process.env.HOMEPATH);
 
 function main() {
 	var cfichat_urlcolor = "\033[97mhttp://chat.cfillion.tk/\033[00m";
