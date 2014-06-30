@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var _Vname = "LeeKloud 1.1.0";
+var _Vname = "LeeKloud 1.1.2";
 
 process.title = _Vname;
 process.stdout.write("\x1Bc");
@@ -110,7 +110,9 @@ function nextStep() {
 	if (process.argv.length > 2) {
 		var match = process.argv[2].match("\\[hs([0-9]+)\\]\.[A-z.]{2,9}$");
 		__LEEK_IDS = JSON.parse(getFileContent(".temp/leeks"));
-		if (match[1]) {
+		if (!match) {
+			console.log("Fichier invalide. N'essaye pas de me troller ! :B")
+		} else if (match[1]) {
 			$.post({
 				url: "/index.php?page=editor_update",
 				data: {
@@ -128,10 +130,12 @@ function nextStep() {
 					open("http://leekwars.com/fight=" + data);
 				}
 			});
-			setTimeout(function() {
-				process.exit(1);
-			}, 1200);
 		}
+		console.log("Arrêt dans 4 secondes.");
+		process.stdin.pause();
+		return setTimeout(function() {
+			process.exit(1);
+		}, 4000);
 	}
 
 	getScripts();
