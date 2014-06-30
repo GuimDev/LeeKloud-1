@@ -284,7 +284,7 @@ function sendScript(id, forceUpdate) {
 							pos = (s + 2) + code.split("\n")[l - 1].replace(/[^\t]/g, "").length * 3 + parseInt(data.char);
 
 						for (var i = l - 5; i < l; i++) {
-							alignLine(i + 1, codeline[i], s);
+							alignLine(i + 1, codeline[i], s, pos);
 						}
 						console.log(Array(pos).join(" ") + "\033[91m^\033[00m");
 						console.log("Error: " + data.error + " (ligne : " + data.line + ", caract : " + data.char + ").");
@@ -301,9 +301,11 @@ function sendScript(id, forceUpdate) {
 	});
 }
 
-function alignLine(num, text, longer) {
+function alignLine(num, text, longer, maxsize) {
+	var maxlength = process.stdout.columns;
 	num = num + Array(longer - (num + "").length).join(" ");
-	console.log("\033[36m" + num + " |\033[00m " + text);
+	maxlength -= num.length + 3;
+	console.log("\033[36m" + num + " |\033[00m " + text.slice(0, (maxsize < maxlength) ? maxlength : maxsize));
 }
 
 function loadScript(value, index, success) {
