@@ -23,7 +23,7 @@ Sous Linux :
 
 Emplacement trouvez le dossier .LeeKloud/ dans :
 
- - Sous Linux : regarder dans le répertoire HOME `env |grep HOME` (~/Username).
+ - Sous Linux : regarder dans le répertoire HOME `echo $HOME` (~/Username).
  - Sous Windows : regarder dans %APPDATA% ou %USERPROFILE% (C:/Users/Username/AppData/Roaming).
  - Sous Max : regader dans le HOMEPATH (/Users/Username).
 
