@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var _Vname = "LeeKloud 1.1.4";
+var _Vname = "LeeKloud 1.1.6";
 
 process.title = _Vname;
 process.stdout.write("\x1Bc");
@@ -725,6 +725,7 @@ function useCommande(line) {
 		} else if (!__mustBeUpdate) {
 			console.log("Vous n'avez pas besoin d'utiliser cette commande.");
 		} else {
+			console.log("Confirmez la commande.");
 			rl.line = ".leekloud-update y";
 		}
 	}
