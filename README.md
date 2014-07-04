@@ -14,6 +14,11 @@ Sous Windows :
     cd <\chemin\de\LeeKloud\>
     node _LeeKloud.js
 
+
+Un tutoriel pour installer nodejs sous windows : http://blog.idleman.fr/nodejs-15-installation-sous-windows/
+
+Pensez à modifier le PATH de votre environnement pour que la commande "node" fonctionne sans avoir à modifier le répertoire (avec la commande cd).
+
 Sous Linux :
 
 	ls <\chemin\de\LeeKloud\>
