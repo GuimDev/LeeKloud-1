@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var _Vname = "LeeKloud 1.1.6b";
+var _Vname = "LeeKloud 1.1.6c";
 
 process.title = _Vname;
 process.stdout.write("\x1Bc");
@@ -66,7 +66,8 @@ var _LKfolder = "";
 
 function main() {
 	var cfichat_urlcolor = "\033[95mhttp://chat.cfillion.tk/\033[00m";
-	console.log("------------------------------ " + _Vname + " ------------------------------");
+	var right = Array(45 - _Vname.length).join("-");
+	console.log("------------------------------ " + _Vname + " " +            right           );
 	console.log("Programme proposé par @GuimDev, certaines parties du code sont sous licence.");
 	console.log("-- En partenariat avec cfiChat : " + cfichat_urlcolor + " (programmation).--");
 	console.log("En cas de problème contactez moi sur le forum, ou MP HorsSujet (farmer=265).");
@@ -537,7 +538,7 @@ function sandbox(ia_id, leekid) {
 }
 
 function sendFight(data) {
-	console.log("Demande de combat effectué.");
+	console.log("Demande de combat effectuée.");
 	data.token = __TOKEN;
 	return $.post({
 		url: "/index.php?page=garden_update",
