@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var _Vname = "LeeKloud 1.1.6";
+var _Vname = "LeeKloud 1.1.6b";
 
 process.title = _Vname;
 process.stdout.write("\x1Bc");
@@ -262,6 +262,10 @@ function __IA(id) {
 	};
 }
 
+Number.prototype.pad = function () {
+    return (this < 10) ? ("0" + this) : this;
+}
+
 function sendScript(id, forceUpdate) {
 	forceUpdate = (forceUpdate) ? true : false;
 	loadScript(id, __AI_IDS.indexOf(id), function(res, data, context) {
@@ -289,9 +293,9 @@ function sendScript(id, forceUpdate) {
 					var myIA = new __IA(id);
 					data = JSON.parse(data);
 					console.log(" ");
-					console.log("L'envoie de \033[36m" + myIA.filename + "\033[00m " + ((data.success) ? "réussi" : "echoué") + ".");
+					console.log("L'envoie de \033[36m" + myIA.filename + "\033[00m " + ((data.success) ? "réussi" : "échoué") + ".");
 					if (data && data.success) {
-						console.log("Niveau : " + data.level + " Coeur : " + data.core+"\n");
+						console.log("Niveau : " + data.level + " Coeur : " + data.core);
 					} else if (data && data.error && data.line && data.char) { // Gestion des erreurs :
 						console.log(" ");
 						var codeline = code.replace(/\t/g, "    ").split("\n"),
@@ -303,10 +307,11 @@ function sendScript(id, forceUpdate) {
 							alignLine(i + 1, codeline[i], s, pos);
 						}
 						console.log(Array(pos).join(" ") + "\033[91m^\033[00m");
-						console.log("Error: " + data.error + " (ligne : " + data.line + ", caract : " + data.char + ").");
+						console.log(data.error + " (ligne : " + data.line + ", caract : " + data.char + ").");
 					} else {
-						console.log("Le serveur retourne une erreur inconnu. Compilation ? Problème lors de l'envois ?");
+						console.log("Le serveur retourne une erreur inconnu. Compilation ? Problème lors de l'envois ? ("+JSON.stringify(data)+").");
 					}
+					console.log(" ");
 				}
 			});
 			setFileContent(".temp/hash", JSON.stringify(__FILEHASH));
@@ -325,7 +330,9 @@ function alignLine(num, text, longer, maxsize) {
 }
 
 function loadScript(value, index, success) {
-	console.log("- Requête pour \033[36m" + __AI_NAMES[index] + "\033[00m.");
+	var d = new Date(),
+		h = d.getHours().pad()+":"+d.getMinutes().pad()+":"+d.getSeconds().pad();
+	console.log("["+h+"] - Requête pour \033[36m" + __AI_NAMES[index] + "\033[00m.");
 	var myIA = new __IA(value);
 	$.post({
 		url: "/index.php?page=editor_update",
@@ -429,7 +436,7 @@ function successloadScript(res, data, context) {
 				var mtime = new Date(stats.mtime).getTime(),
 					hash = sha256(getFileContent(filename));
 				if (__FILEMTIME[myIA.id] != mtime && __FILEHASH[myIA.id].filehash != hash) {
-					console.log("\033[36m" + filename + "\033[00m a changé.");
+					console.log("\033[36m" + filename + "\033[00m a changé.\n");
 					__FILEHASH[myIA.id].filehash = hash;
 					sendScript(myIA.id, false);
 				}
@@ -499,9 +506,9 @@ function showListIA() {
 }
 
 function callbackFight(res, data, context) {
-	if (!isNaN(data = parseInt(data))) {
+	if (!isNaN(parseInt(data))) {
 		open("http://leekwars.com/fight=" + data);
-		console.log("Combat généré : " + data);
+		console.log("Combat généré : " + parseInt(data));
 	} else {
 		data = (data) ? data.replace("\n","") : data;
 		console.log("Le combat n'a pas été généré ("+data+")");
@@ -525,6 +532,16 @@ function sandbox(ia_id, leekid) {
 			"test-type": "solo",
 			token: __TOKEN
 		},
+		success: callbackFight
+	});
+}
+
+function sendFight(data) {
+	console.log("Demande de combat effectué.");
+	data.token = __TOKEN;
+	return $.post({
+		url: "/index.php?page=garden_update",
+		data: data,
 		success: callbackFight
 	});
 }
@@ -666,17 +683,21 @@ function useCommande(line) {
 		var enemy = parseInt(commande[1]);
 
 		if (enemy) {
-			console.log("Demande de combat effectué.");
-			$.post({
-				url: "/index.php?page=garden_update",
-				data: {
-					target_farmer: enemy,
-					token: __TOKEN
-				},
-				success: callbackFight
-			});
+			sendFight({ target_farmer: enemy });
 		} else {
-			console.log("Option manquante.");
+			console.log("Id manquante.");
+		}
+	}
+	// =====================================================
+	// ====================== LEEKFIGHT ====================
+	else if (commande[0] == ".leekfight") {
+		var id = parseInt(commande[1]),
+			enemy = parseInt(commande[2]);
+
+		if (__LEEK_IDS[id]) {
+			sendFight({ leek_id: __LEEK_IDS[id], enemy_id: enemy });
+		} else {
+			console.log("Le numéro du Leek doit-être entre 0 et "+(__LEEK_IDS.length-1)+".");
 		}
 	}
 	// =====================================================
@@ -686,16 +707,7 @@ function useCommande(line) {
 			enemy = parseInt(commande[2]);
 
 		if (__LEEK_IDS[id]) {
-			console.log("Demande de combat effectué.");
-			$.post({
-				url: "/index.php?page=garden_update",
-				data: {
-					leek_id: __LEEK_IDS[id],
-					challenge_id: enemy,
-					token: __TOKEN
-				},
-				success: callbackFight
-			});
+			sendFight({ leek_id: __LEEK_IDS[id], challenge_id: enemy });
 		} else {
 			console.log("Le numéro du Leek doit-être entre 0 et "+(__LEEK_IDS.length-1)+".");
 		}
