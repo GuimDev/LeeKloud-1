@@ -1,0 +1,5 @@
+[1.1.6d]
+- Update "User-Agent" in HTTP header.
+- Fix Mac OS issue (when you saving file).
+- Improve description in the help.
+- Add changelog.
