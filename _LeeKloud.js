@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-var _Vname = "LeeKloud 1.1.6c";
+var __version = "1.1.6c";
+var _Vname = "LeeKloud " + __version;
 
 process.title = _Vname;
 process.stdout.write("\x1Bc");
@@ -56,7 +57,7 @@ function fixASCII(data) { // Problème d'encodage, on vire le caractère 65279.
 }
 
 var _LKfolder = "";
-(function (folder) {
+(function(folder) {
 	_LKfolder = folder += "/.LeeKloud/";
 	if (!fs.existsSync(folder)) {
 		fs.mkdirSync(folder);
@@ -67,7 +68,7 @@ var _LKfolder = "";
 function main() {
 	var cfichat_urlcolor = "\033[95mhttp://chat.cfillion.tk/\033[00m";
 	var right = Array(45 - _Vname.length).join("-");
-	console.log("------------------------------ " + _Vname + " " +            right           );
+	console.log("------------------------------ " + _Vname + " " + right);
 	console.log("Programme proposé par @GuimDev, certaines parties du code sont sous licence.");
 	console.log("-- En partenariat avec cfiChat : " + cfichat_urlcolor + " (programmation).--");
 	console.log("En cas de problème contactez moi sur le forum, ou MP HorsSujet (farmer=265).");
@@ -79,7 +80,6 @@ function main() {
 		}
 	});
 
-	setFileContent(".temp/version", sha256(getFileContent(__filename)));
 	if (fs.existsSync(".temp/history")) {
 		rl.history = JSON.parse(getFileContent(".temp/history"));
 	}
@@ -132,14 +132,14 @@ function nextStep() {
 			console.log("Fichier invalide. N'essaye pas de me troller ! :B");
 			shutdown();
 		} else if (match[1]) {
-			console.log("Demande de test de l'IA : \033[36m"+match[0]+"\033[00m");
-			var phrase = "entre 0 et "+(__LEEK_IDS.length-1);
-			rl.question("Numéro du Leek ("+phrase+") pour tester l'IA : ", function(id) {
+			console.log("Demande de test de l'IA : \033[36m" + match[0] + "\033[00m");
+			var phrase = "entre 0 et " + (__LEEK_IDS.length - 1);
+			rl.question("Numéro du Leek (" + phrase + ") pour tester l'IA : ", function(id) {
 				if (!__LEEK_IDS[id]) {
-					console.log("Le numéro du Leek doit-être "+phrase+".");
+					console.log("Le numéro du Leek doit-être " + phrase + ".");
 					return nextStep();
 				}
-				sandbox(parseInt(match[1]), __LEEK_IDS[id]).done(function () {
+				sandbox(parseInt(match[1]), __LEEK_IDS[id]).done(function() {
 					shutdown();
 				});
 			});
@@ -148,7 +148,7 @@ function nextStep() {
 	}
 
 	open(_LKfolder);
-	getScripts();
+	setTimeout(getScripts, 2000);
 }
 
 function shutdown() {
@@ -210,6 +210,7 @@ function getFilePathBackup(filename) {
 }
 
 function getFileContent(filename) {
+	/*if (!fs.existsSync(filename)) return null;*/
 	return fixASCII(fs.readFileSync(filename).toString());
 }
 
@@ -263,8 +264,13 @@ function __IA(id) {
 	};
 }
 
-Number.prototype.pad = function () {
-    return (this < 10) ? ("0" + this) : this;
+Number.prototype.round = function(a) {
+	a = (a) ? parseInt("1" + Array(a + 1).join("0")) : 1;
+	return Math.round(this * a) / a;
+};
+
+Number.prototype.pad = function() {
+	return (this < 10) ? ("0" + this) : this;
 }
 
 function sendScript(id, forceUpdate) {
@@ -310,7 +316,7 @@ function sendScript(id, forceUpdate) {
 						console.log(Array(pos).join(" ") + "\033[91m^\033[00m");
 						console.log(data.error + " (ligne : " + data.line + ", caract : " + data.char + ").");
 					} else {
-						console.log("Le serveur retourne une erreur inconnu. Compilation ? Problème lors de l'envois ? ("+JSON.stringify(data)+").");
+						console.log("Le serveur retourne une erreur inconnu. Compilation ? Problème lors de l'envois ? (" + JSON.stringify(data) + ").");
 					}
 					console.log(" ");
 				}
@@ -332,8 +338,8 @@ function alignLine(num, text, longer, maxsize) {
 
 function loadScript(value, index, success) {
 	var d = new Date(),
-		h = d.getHours().pad()+":"+d.getMinutes().pad()+":"+d.getSeconds().pad();
-	console.log("["+h+"] - Requête pour \033[36m" + __AI_NAMES[index] + "\033[00m.");
+		h = d.getHours().pad() + ":" + d.getMinutes().pad() + ":" + d.getSeconds().pad();
+	console.log("[" + h + "] - Requête pour \033[36m" + __AI_NAMES[index] + "\033[00m.");
 	var myIA = new __IA(value);
 	$.post({
 		url: "/index.php?page=editor_update",
@@ -431,7 +437,7 @@ function successloadScript(res, data, context) {
 	});
 
 	fs.watch(myIA.filepath, function(event, filename) {
-		filename = _IAfolder + filename;
+		filename = (_IAfolder + filename) || myIA.filepath;
 		if (filename && event == "change") {
 			fs.stat(filename, function(err, stats) {
 				var mtime = new Date(stats.mtime).getTime(),
@@ -448,16 +454,25 @@ function successloadScript(res, data, context) {
 }
 
 var __mustBeUpdate = false;
+
 function verifyVersion(abc) {
-	getLeeKloud(function (res, data) {
+	if (!abc) {
+		if (!fs.existsSync(".temp/version") || getFileContent(".temp/version") != sha256(getFileContent(__filename))) {
+			console.log("\033[96m");
+			splashMessage("La nouvelle version est correctement installée.");
+			console.log("\033[00m");
+			showChangelog(__version, true);
+		}
+		setFileContent(".temp/version", sha256(getFileContent(__filename)));
+	}
+
+	getLeeKloud(function(res, data) {
 		if (abc) {
 			__mustBeUpdate = false;
 			setFileContent(__filename, data);
 
 			console.log("\033[96m");
-			console.log("----------------------------------------------------------------------------");
-			console.log("------------------- La nouvelle version a été installé ! -------------------");
-			console.log("----------------------------------------------------------------------------");
+			splashMessage("La nouvelle version a été installée !");
 			console.log("\033[00m");
 			shutdown();
 		} else {
@@ -467,14 +482,49 @@ function verifyVersion(abc) {
 			if (localhash != serverhash) {
 				__mustBeUpdate = true;
 				console.log("\033[96m");
-				console.log("local   : \033[00m"+localhash+"\033[96m");
-				console.log("distant : \033[00m"+serverhash+"\033[96m");
-				console.log("----------------------------------------------------------------------------");
-				console.log("----------------- Une version plus récente est disponible. -----------------");
-				console.log("----------------------------------------------------------------------------");
+				console.log("local   : \033[00m" + localhash + "\033[96m");
+				console.log("distant : \033[00m" + serverhash + "\033[96m");
+				splashMessage("Une version plus récente est disponible.");
 				console.log("Utilisez la commande \"\033[00m.leekloud-update\033[96m\".");
 				console.log("\033[00m");
+
+				showChangelog();
 			}
+		}
+	});
+}
+
+function splashMessage(msg, size) {
+	var size = (size) ? size : 60;
+	console.log(Array(size).join("-"));
+	var a = Array(((size - msg.length + 2) / 2).round()).join("-") + " " + msg + " ";
+	console.log(a + Array(size - a.length).join("-"));
+	console.log(Array(size).join("-"));
+}
+
+function showChangelog(version, actual) {
+	version = (version) ? version : __version;
+	getChangeLogLeeKloud(function(res, data) {
+		var i = 2,
+			t = data.split(/(^|\n)\[(.+)\]\n/),
+			log = "",
+			bool = true;
+
+		splashMessage("CHANGELOG :", 60);
+
+		console.log("Migration : \033[96m" + version + "\033[00m => \033[96m" + t[i] + "\033[00m\n");
+
+		while (t[i] && ((bool && version != t[i]) || actual)) {
+			console.log("\nVersion \033[96m" + t[i] + "\033[00m :");
+			log = t[i + 1];
+			log = log.replace(/((^-|\n-) |\.[a-z-]+)/g, "\033[96m$1\033[00m");
+			log = log.replace(/"(.*)"/g, "\"\033[95m$1\033[00m\"");
+
+			if (version == t[i] && actual) {
+				bool = actual = false;
+			}
+			console.log(log + "\n");
+			i += 3;
 		}
 	});
 }
@@ -511,8 +561,8 @@ function callbackFight(res, data, context) {
 		open("http://leekwars.com/fight=" + data);
 		console.log("Combat généré : " + parseInt(data));
 	} else {
-		data = (data) ? data.replace("\n","") : data;
-		console.log("Le combat n'a pas été généré ("+data+")");
+		data = (data) ? data.replace("\n", "") : data;
+		console.log("Le combat n'a pas été généré (" + data + ")");
 	}
 	console.log(" ");
 }
@@ -521,7 +571,7 @@ function sandbox(ia_id, leekid) {
 	console.log(ia_id);
 	var myIA = new __IA(ia_id);
 	if (myIA.name) {
-		console.log("Demande de test de l'IA : \033[36m"+myIA.name+"\033[00m");
+		console.log("Demande de test de l'IA : \033[36m" + myIA.name + "\033[00m");
 	}
 	return $.post({
 		url: "/index.php?page=editor_update",
@@ -549,7 +599,7 @@ function sendFight(data) {
 
 function useCommande(line) {
 	var commande = line.split(" ");
-	
+
 	// =====================================================
 	// ================= BACKUP ============================
 	if (commande[0] == ".backup") {
@@ -589,6 +639,7 @@ function useCommande(line) {
 			sendScript(id, true);
 			console.log("Mise à jour de l'IA n°\033[36m" + id + "\033[00m, \033[36m" + __AI_NAMES[index] + "\033[00m.");
 		} else {
+			console.log(".forceupdate [id]");
 			showListIA();
 		}
 	}
@@ -603,6 +654,7 @@ function useCommande(line) {
 			open(myIA.filepath);
 			console.log("Ouverture de l'IA n°\033[36m" + id + "\033[00m, \033[36m" + myIA.filename + "\033[00m.");
 		} else {
+			console.log(".open [id]");
 			showListIA();
 		}
 	}
@@ -618,6 +670,7 @@ function useCommande(line) {
 
 			console.log("Comparaison de l'IA n°\033[36m" + myIAs[0].id + "\033[00m et n°\033[36m" + myIAs[1].id + "\033[00m, \033[36m" + myIAs[0].name + "\033[00m et \033[36m" + myIAs[1].name + "\033[00m.");
 		} else {
+			console.log(".compare [id1] [id2]");
 			showListIA();
 		}
 	}
@@ -646,6 +699,7 @@ function useCommande(line) {
 				console.log("C'est bien de vouloir renommer son IA, mais faut peut-être choisir un nouveau nom. - Après moi je dis ça... :B");
 			}
 		} else {
+			console.log(".rename [id] [new_name]");
 			showListIA();
 		}
 	}
@@ -654,10 +708,10 @@ function useCommande(line) {
 	else if (commande[0] == ".workspace") {
 		if (commande[1] == "make") {
 			var name = commande.slice(2).join(" ");
-			if (name == parseName(name) && !fs.existsSync(_WKfolder+name)) {
-				fs.mkdirSync(_WKfolder+name);
+			if (name == parseName(name) && !fs.existsSync(_WKfolder + name)) {
+				fs.mkdirSync(_WKfolder + name);
 			} else {
-				if (!fs.existsSync(_WKfolder+name)) {
+				if (!fs.existsSync(_WKfolder + name)) {
 					console.log("Le nom est invalide (non autorisé : \/, \\, :, *, ?, \", <, >, &, |).");
 				} else {
 					console.log("Le dossier existe déjà dans le workspace.");
@@ -684,7 +738,9 @@ function useCommande(line) {
 		var enemy = parseInt(commande[1]);
 
 		if (enemy) {
-			sendFight({ target_farmer: enemy });
+			sendFight({
+				target_farmer: enemy
+			});
 		} else {
 			console.log("Id manquante.");
 		}
@@ -696,9 +752,12 @@ function useCommande(line) {
 			enemy = parseInt(commande[2]);
 
 		if (__LEEK_IDS[id]) {
-			sendFight({ leek_id: __LEEK_IDS[id], enemy_id: enemy });
+			sendFight({
+				leek_id: __LEEK_IDS[id],
+				enemy_id: enemy
+			});
 		} else {
-			console.log("Le numéro du Leek doit-être entre 0 et "+(__LEEK_IDS.length-1)+".");
+			console.log("Le numéro du Leek doit-être entre 0 et " + (__LEEK_IDS.length - 1) + ".");
 		}
 	}
 	// =====================================================
@@ -708,9 +767,12 @@ function useCommande(line) {
 			enemy = parseInt(commande[2]);
 
 		if (__LEEK_IDS[id]) {
-			sendFight({ leek_id: __LEEK_IDS[id], challenge_id: enemy });
+			sendFight({
+				leek_id: __LEEK_IDS[id],
+				challenge_id: enemy
+			});
 		} else {
-			console.log("Le numéro du Leek doit-être entre 0 et "+(__LEEK_IDS.length-1)+".");
+			console.log("Le numéro du Leek doit-être entre 0 et " + (__LEEK_IDS.length - 1) + ".");
 		}
 	}
 	// =====================================================
@@ -724,9 +786,10 @@ function useCommande(line) {
 			if (leekid) {
 				sandbox(ia_id, leekid);
 			} else {
-				console.log("Le numéro du Leek doit-être entre 0 et "+(__LEEK_IDS.length-1)+".");
+				console.log("Le numéro du Leek doit-être entre 0 et " + (__LEEK_IDS.length - 1) + ".");
 			}
 		} else {
+			console.log(".sandbox [id] [num_leek]");
 			showListIA();
 		}
 	}
@@ -743,19 +806,31 @@ function useCommande(line) {
 		}
 	}
 	// =====================================================
+	// ====================== CHANGELOG ====================
+	else if (commande[0] == ".changelog") {
+		var version = commande[1];
+		if (!version || /^[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2}[A-z]?$/.test(version)) {
+			showChangelog(version, true);
+		} else if (version) {
+			console.log("Format de la version incorrect, il doit-être " + __version + " (X.X.X).");
+		}
+	}
+	// =====================================================
 	// ===================== HELP ==========================
 	else if (["help", "?", ".help", "/?"].indexOf(commande[0]) != -1) {
 		console.log("Aide :");
+		var numhelp = "[num] est le numéro de votre poireau (entre 0 et " + (__LEEK_IDS.length - 1) + ")";
 		var lines = [
 			[".backup [id] {restore / open / compare}", "Gestion des backups"],
 			[".forceupdate [id]", "Forcer l'envoie de l'IA"],
 			[".open [id]", "Ouvre l'IA"],
-			[".compare [id1] [id2]", "Compare deux fichiers"],
-			[".rename [id] [name]", "Change le nom de l'IA"],
-			[".sandbox [id] [num]", "Lance un combat de test."],
+			[".compare [id1] [id2]", "Compare deux IA"],
+			[".rename [id] [new_name]", "Change le nom de l'IA"],
+			[".sandbox [id] [num_leek]", "Lance un combat de test, " + numhelp],
 			[".workspace [option]", "Pour gérer les workspaces (plus d'aide \033[95m.workspace help\033[00m)"],
-			[".challenge [num] [leekid]", "Lance un challenge, [num] est le numéro de votre poireau (entre 0 et "+(__LEEK_IDS.length-1)+"), [leekid] est l'id du poireau à attaquer (dans l'url)."]
-			
+			[".challenge [num_leek] [leekid]", "Lance un challenge, " + numhelp + ", [leekid] est l'id du poireau à attaquer (dans l'url)"],
+			[".changelog [version]", "Affiche les changements depuis la version [version]."]
+
 		];
 		for (var i = 0; i < lines.length; i++) {
 			console.log("\033[95m" + lines[i].join("\033[00m : ") + ".");
@@ -801,8 +876,8 @@ function useCommande(line) {
 
 function completerId(cmd, line, hits, verify) {
 	var verify = (verify) ? verify : function(id, index) {
-		return true;
-	};
+			return true;
+		};
 
 	var t = [cmd];
 	if (line.indexOf(cmd) == 0) {
@@ -843,7 +918,7 @@ var __TAB_COMPLETIONS = [
 	".help", ".backup ", ".forceupdate ",
 	".open ", ".compare ", ".rename ",
 	".sandbox ", ".workspace ", ".challenge ",
-	".leekloud-update"
+	".leekloud-update", ".changelog"
 ].concat("twitter / cfichat / forum / MP / leek / doc ".split(" / "));
 
 ////--------------------------------------------------------------------------------
@@ -866,11 +941,11 @@ function invasionB(b) {
 	};
 
 	var stdout = process.stdout;
-	var margin_y = (b) ? noNegative(Math.round((stdout.rows - a.length) / 2)) : 0;
+	var margin_y = (b) ? noNegative(((stdout.rows - a.length) / 2).round()) : 0;
 	console.log(" " + Array(margin_y).join("\n"));
 	for (var i = 0, value = 0; i < a.length; i++) {
 		value = a[i].toString(2).substr(1);
-		console.log(Array(noNegative(Math.round((stdout.columns - value.length) / 2))).join(" ") + value.replace(/0/g, " "));
+		console.log(Array(noNegative((stdout.columns - value.length) / 2).round()).join(" ") + value.replace(/0/g, " "));
 	}
 	console.log(" " + ((b) ? Array(noNegative(stdout.rows - a.length - margin_y - 3)).join("\n") : ""));
 }
@@ -923,7 +998,11 @@ function post(option) {
 function ajax(option) {
 	var data = (option.data) ? querystring.stringify(option.data) : "",
 		context = (option.context) ? option.context : {},
-		supplob = { done: function (a) { return (a) ? supplob.done = a : null; } };
+		supplob = {
+			done: function(a) {
+				return (a) ? supplob.done = a : null;
+			}
+		};
 
 	var options = {
 		host: "leekwars.com",
@@ -931,7 +1010,7 @@ function ajax(option) {
 		path: option.url,
 		method: (option.method == "GET") ? "GET" : "POST",
 		headers: {
-			"User-Agent": "NodeJS/1.0",
+			"User-Agent": "NodeJS " + _Vname.split("/"),
 			"Content-Type": "application/x-www-form-urlencoded",
 			"Content-Length": data.length,
 			"Cookie": myCookie
@@ -965,22 +1044,36 @@ function ajax(option) {
 	return supplob;
 }
 
-function getLeeKloud(success) {
+function ajaxLeeKloud(path, success) {
 	var options = {
 		host: "raw.githubusercontent.com",
 		port: "443",
-		path: "/GuimDev/LeeKloud/master/_LeeKloud.js",
+		path: path,
 		method: "GET",
 		headers: {
-			"User-Agent": "NodeJS/1.0"
+			"User-Agent": "NodeJS " + _Vname.split("/")
 		}
 	};
 	var req = https.request(options, function(res) {
 		var c = "";
 		res.setEncoding('utf8');
-		res.on('data', function(chunk) { c += chunk; });
-		res.on('end', function() { success(res, fixASCII(c)); });
-	}).on('error', function(e) { console.log('E:'+e.message); }).end();
+		res.on('data', function(chunk) {
+			c += chunk;
+		});
+		res.on('end', function() {
+			success(res, fixASCII(c));
+		});
+	}).on('error', function(e) {
+		console.log('E:' + e.message);
+	}).end();
+}
+
+function getLeeKloud(success) {
+	ajaxLeeKloud("/GuimDev/LeeKloud/master/_LeeKloud.js", success);
+}
+
+function getChangeLogLeeKloud(success) {
+	ajaxLeeKloud("/GuimDev/LeeKloud/master/CHANGELOG", success);
 }
 
 function dataCookieToString(dataCookie) {
