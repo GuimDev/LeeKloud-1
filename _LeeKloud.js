@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var __version = "1.1.6c";
+var __version = "1.1.6d";
 var _Vname = "LeeKloud " + __version;
 
 process.title = _Vname;
@@ -170,7 +170,7 @@ function getScripts() {
 			if (data == "") {
 				console.log("Vous n'êtes pas connecté, connectez-vous.");
 				fs.unlinkSync(".temp/cookie");
-				return process.exit();
+				return shutdown();
 			}
 
 			__AI_CORES = JSON.parse(data.match(/<script>__AI_CORES = (.*?);<\/script>/)[1]);
@@ -814,6 +814,12 @@ function useCommande(line) {
 		} else if (version) {
 			console.log("Format de la version incorrect, il doit-être " + __version + " (X.X.X).");
 		}
+	}
+	// =====================================================
+	// ====================== LOGOUT =======================
+	else if (commande[0] == ".logout") {
+		fs.unlinkSync(".temp/cookie");
+		return shutdown();
 	}
 	// =====================================================
 	// ===================== HELP ==========================
