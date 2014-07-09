@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var __version = "1.1.6d";
+var __version = "1.1.6e";
 var _Vname = "LeeKloud " + __version;
 
 process.title = _Vname;
@@ -311,7 +311,9 @@ function sendScript(id, forceUpdate) {
 							pos = (s + 2) + code.split("\n")[l - 1].replace(/[^\t]/g, "").length * 3 + parseInt(data.char);
 
 						for (var i = l - 5; i < l; i++) {
-							alignLine(i + 1, codeline[i], s, pos);
+							if (codeline[i]) {
+								alignLine(i + 1, codeline[i], s, pos);
+							}
 						}
 						console.log(Array(pos).join(" ") + "\033[91m^\033[00m");
 						console.log(data.error + " (ligne : " + data.line + ", caract : " + data.char + ").");
@@ -437,7 +439,7 @@ function successloadScript(res, data, context) {
 	});
 
 	fs.watch(myIA.filepath, function(event, filename) {
-		filename = (_IAfolder + filename) || myIA.filepath;
+		filename = (filename) ? _IAfolder + filename : myIA.filepath;
 		if (filename && event == "change") {
 			fs.stat(filename, function(err, stats) {
 				var mtime = new Date(stats.mtime).getTime(),
