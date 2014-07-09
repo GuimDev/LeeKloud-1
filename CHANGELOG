@@ -1,3 +1,6 @@
+[1.1.6e]
+- Correction d'un problème sous Mac OS.
+- Correction d'un problème d'affichage d'erreur, si elle est dans les quatres dernières lignes.
 [1.1.6d]
 - Modification de l'"User-Agent" dans l'entête HTTP.
 - Correction d'un problème sous Mac OS, qui provoqué l'arrêt brutal de l'application.
