@@ -40,9 +40,21 @@ Modifier la variable `compare_cmd` ligne 21 pour pouvoir utiliser la fonction 'c
 
 ###Problème avec la commande open
 
-Sous windows, si vous avez un problème avec `.open [id]`, vous devez d'abord choisir un éditeur par defaut pour les fichiers ".js".
+Sous windows, si vous avez un problème avec `.open [id]`, vous devez d'abord choisir un éditeur par defaut pour les fichiers ".lk".
 
-Pour définir un programme par défaut : Clique droit sur un fichier ".js" > "Ouvrir avec..." > "Choisir un programme par défaut...".
+Pour définir un programme par défaut : Clique droit sur un fichier ".lk" > "Ouvrir avec..." > "Choisir un programme par défaut...".
 
 
 A voir aussi : https://github.com/GuimDev/LeekScript-Sublime
+
+
+## En cas de problème (french) :
+
+1. Vérifiez que vous avez installer nodejs.
+2. Vérifiez que vous avez bien défini le path d'environnement.
+
+   2.a : Pour windows : [Installation sous Windows](http://blog.idleman.fr/nodejs-15-installation-sous-windows/)
+   2.b : Pour linux : [Node.js doesn't recognize system path?](http://stackoverflow.com/questions/8768549/node-js-doesnt-recognize-system-path)
+   2.2 : [Une variable d'environnement c'est quoi ?](http://www.faire-des-jeux.com/une-variable-denvironnement-cest-quoi/)
+
+3. Dans la cmd tapez `node -v` (sans modifier le répertoire), si ça ne fonctionne pas vérifier l'étape 1 et 2.
