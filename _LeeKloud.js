@@ -1,19 +1,20 @@
 #!/usr/bin/env node
 
-var __version = "1.1.6e";
+var __version = "1.1.6i";
 var _Vname = "LeeKloud " + __version;
 
 process.title = _Vname;
 process.stdout.write("\x1Bc");
 
-var readline = require('readline'),
-	querystring = require('querystring'),
+var crypto = require('crypto'),
+	domain = require('domain'),
 	exec = require('child_process').exec,
-	https = require('https'),
-	http = require('http'),
 	fs = require('fs'),
-	crypto = require('crypto'),
+	http = require('http'),
+	https = require('https'),
 	path = require('path'),
+	querystring = require('querystring'),
+	readline = require('readline'),
 	util = require('util');
 
 var rl = readline.createInterface({
@@ -47,14 +48,18 @@ var _IAfolder = "IA/",
 	_WKfolder = "Workspace/";
 
 
-var myCookie = "";
+var LeeKloud = null,
+	myCookie = "";
 
-function fixASCII(data) { // Problème d'encodage, on vire le caractère 65279.
-	while (data.charCodeAt(0) == 65279) {
-		data = data.replace(/^./, "");
-	}
-	return data;
-}
+process.on('uncaughtException', function(err, b) {
+	console.log("\033[91mErreur vraiment fatale !\033[00m");
+
+	console.log("\n" + err.stack + "\n");
+
+	writeRapportlog(err);
+
+	console.log("\033[91mExit : CTRL + D ou CTRL + C\033[00m");
+});
 
 var _LKfolder = "";
 (function(folder) {
@@ -70,9 +75,10 @@ function main() {
 	var right = Array(45 - _Vname.length).join("-");
 	console.log("------------------------------ " + _Vname + " " + right);
 	console.log("Programme proposé par @GuimDev, certaines parties du code sont sous licence.");
-	console.log("-- En partenariat avec cfiChat : " + cfichat_urlcolor + " (programmation).--");
+	console.log("------ Retrouvez nous sur : " + cfichat_urlcolor + " (programmation). ------");
 	console.log("En cas de problème contactez moi sur le forum, ou MP HorsSujet (farmer=265).");
 	console.log("----------------------------------------------------------------------------");
+	console.log("Emplacement : \033[96m" + process.cwd() + "\033[0m");
 
 	[_IAfolder, _WKfolder, ".temp/", ".temp/backup/"].forEach(function(dir, index) {
 		if (!fs.existsSync(dir)) {
@@ -121,7 +127,33 @@ function main() {
 	}
 }
 
-setTimeout(main, 10);
+function launcher(clear, message) {
+	if (clear) {
+		process.stdout.write("\x1Bc");
+		(message && console.log(message));
+	}
+
+	LeeKloud = domain.create();
+	LeeKloud.on("error", function(err) {
+		console.log("\n\033[91mErreur arrêt de toutes les tâches en cours !\033[00m");
+		console.log("\n" + err.stack + "\n\n");
+		writeRapportlog(err);
+		LeeKloud.dispose();
+		rl.clearLine();
+		rl.question("LeeKloud a rencontré une erreur, voulez vous relancer LeeKloud ? ", function(answer) {
+			if (answer.match(/o(ui)?/i) || answer.match(/y(es)?/i)) {
+				rl.output.write("> ");
+				launcher(true, "\033[91mRedémarrage...\033[00m");
+			} else {
+				saveHistory();
+				process.exit(1);
+			}
+		});
+	});
+	LeeKloud.run(main);
+}
+
+setTimeout(launcher, 10);
 
 function nextStep() {
 	if (process.argv.length > 2) {
@@ -146,7 +178,6 @@ function nextStep() {
 		}
 		return;
 	}
-
 	open(_LKfolder);
 	setTimeout(getScripts, 2000);
 }
@@ -209,8 +240,8 @@ function getFilePathBackup(filename) {
 	return ".temp/backup/" + filename + ".back.js";
 }
 
-function getFileContent(filename) {
-	/*if (!fs.existsSync(filename)) return null;*/
+function getFileContent(filename, check) {
+	if (check && !fs.existsSync(filename)) return "";
 	return fixASCII(fs.readFileSync(filename).toString());
 }
 
@@ -455,51 +486,56 @@ function successloadScript(res, data, context) {
 	});
 }
 
+splashMessage("La nouvelle version est correctement installée.");
 var __mustBeUpdate = false;
 
 function verifyVersion(abc) {
+	var check = true;
 	if (!abc) {
 		if (!fs.existsSync(".temp/version") || getFileContent(".temp/version") != sha256(getFileContent(__filename))) {
 			console.log("\033[96m");
 			splashMessage("La nouvelle version est correctement installée.");
 			console.log("\033[00m");
 			showChangelog(__version, true);
+			check = false;
 		}
 		setFileContent(".temp/version", sha256(getFileContent(__filename)));
 	}
 
-	getLeeKloud(function(res, data) {
-		if (abc) {
-			__mustBeUpdate = false;
-			setFileContent(__filename, data);
+	if (check) {
+		getLeeKloud(function(res, data) {
+			if (abc) {
+				__mustBeUpdate = false;
+				setFileContent(__filename, data);
 
-			console.log("\033[96m");
-			splashMessage("La nouvelle version a été installée !");
-			console.log("\033[00m");
-			shutdown();
-		} else {
-			var localhash = getFileContent(".temp/version"),
-				serverhash = sha256(data);
-
-			if (localhash != serverhash) {
-				__mustBeUpdate = true;
 				console.log("\033[96m");
-				console.log("local   : \033[00m" + localhash + "\033[96m");
-				console.log("distant : \033[00m" + serverhash + "\033[96m");
-				splashMessage("Une version plus récente est disponible.");
-				console.log("Utilisez la commande \"\033[00m.leekloud-update\033[96m\".");
+				splashMessage("La nouvelle version a été installée !");
 				console.log("\033[00m");
+				shutdown();
+			} else {
+				var localhash = getFileContent(".temp/version"),
+					serverhash = sha256(data);
 
-				showChangelog();
+				if (localhash != serverhash) {
+					__mustBeUpdate = true;
+					console.log("\033[96m");
+					console.log("local   : \033[00m" + localhash + "\033[96m");
+					console.log("distant : \033[00m" + serverhash + "\033[96m");
+					splashMessage("Une version plus récente est disponible.");
+					console.log("Utilisez la commande \"\033[00m.leekloud-update\033[96m\".");
+					console.log("\033[00m");
+
+					showChangelog();
+				}
 			}
-		}
-	});
+		});
+	}
 }
 
 function splashMessage(msg, size) {
 	var size = (size) ? size : 60;
 	console.log(Array(size).join("-"));
-	var a = Array(((size - msg.length + 2) / 2).round()).join("-") + " " + msg + " ";
+	var a = Array(((size - msg.length - 1) / 2).round()).join("-") + " " + msg + " ";
 	console.log(a + Array(size - a.length).join("-"));
 	console.log(Array(size).join("-"));
 }
@@ -512,21 +548,23 @@ function showChangelog(version, actual) {
 			log = "",
 			bool = true;
 
-		splashMessage("CHANGELOG :", 60);
+		if ([version, t[i]].sort()[0] == version) {
+			splashMessage("CHANGELOG :", 60);
 
-		console.log("Migration : \033[96m" + version + "\033[00m => \033[96m" + t[i] + "\033[00m\n");
+			console.log("Migration : \033[96m" + version + "\033[00m => \033[96m" + t[i] + "\033[00m\n");
 
-		while (t[i] && ((bool && version != t[i]) || actual)) {
-			console.log("\nVersion \033[96m" + t[i] + "\033[00m :");
-			log = t[i + 1];
-			log = log.replace(/((^-|\n-) |\.[a-z-]+)/g, "\033[96m$1\033[00m");
-			log = log.replace(/"(.*)"/g, "\"\033[95m$1\033[00m\"");
+			while (t[i] && ((bool && version != t[i]) || actual) && [version, t[i]].sort()[0] == version) {
+				console.log("\nVersion \033[96m" + t[i] + "\033[00m :");
+				log = t[i + 1];
+				log = log.replace(/((^-|\n-) |\.[a-z-]+)/g, "\033[96m$1\033[00m");
+				log = log.replace(/"(.*)"/g, "\"\033[95m$1\033[00m\"");
 
-			if (version == t[i] && actual) {
-				bool = actual = false;
+				if (version == t[i] && actual) {
+					bool = actual = false;
+				}
+				console.log(log + "\n");
+				i += 3;
 			}
-			console.log(log + "\n");
-			i += 3;
 		}
 	});
 }
@@ -884,8 +922,8 @@ function useCommande(line) {
 
 function completerId(cmd, line, hits, verify) {
 	var verify = (verify) ? verify : function(id, index) {
-			return true;
-		};
+		return true;
+	};
 
 	var t = [cmd];
 	if (line.indexOf(cmd) == 0) {
@@ -932,6 +970,12 @@ var __TAB_COMPLETIONS = [
 ////--------------------------------------------------------------------------------
 ////--------------------------------------------------------------------------------
 ////--------------------------------------------------------------------------------
+
+function writeRapportlog(err) {
+	var erreur = "-- " + new Date() + " -- \n\n" + err.stack + "\n\n\n";
+	setFileContent("rapport.log", getFileContent("rapport.log", true) + erreur);
+	console.log("L'erreur a été reportée dans le fichier :\n\033[96m" + fs.realpathSync("./rapport.log") + "\033[0m\n");
+}
 
 function saveHistory() {
 	setFileContent(".temp/history", JSON.stringify(rl.history.slice(1, 20)));
@@ -991,6 +1035,13 @@ function hidden(query, callback) {
 	});
 
 	rl.question(query, callback);
+}
+
+function fixASCII(data) { // Problème d'encodage, on vire le caractère 65279.
+	while (data.charCodeAt(0) == 65279) {
+		data = data.replace(/^./, "");
+	}
+	return data;
 }
 
 function get(option) {
