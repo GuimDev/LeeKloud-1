@@ -179,6 +179,7 @@ function nextStep() {
 		return;
 	}
 	open(_LKfolder);
+	verifyVersion();
 	setTimeout(getScripts, 2000);
 }
 
@@ -461,7 +462,6 @@ function successloadScript(res, data, context) {
 
 	if (__fileload++ && __fileload >= __AI_IDS.length) {
 		console.log(" \n>> Tous les téléchargements sont terminés.\n");
-		verifyVersion();
 	}
 	setFileContent(".temp/hash", JSON.stringify(__FILEHASH));
 
@@ -683,6 +683,11 @@ function useCommande(line) {
 			showListIA();
 		}
 	}
+	// ======================================================
+	// ====================== REFRESH =======================
+	else if (commande[0] == ".refresh") {
+		getScripts();
+	}
 	// =====================================================
 	// ====================== OPEN =========================
 	else if (commande[0] == ".open") {
@@ -869,6 +874,7 @@ function useCommande(line) {
 		var lines = [
 			[".backup [id] {restore / open / compare}", "Gestion des backups"],
 			[".forceupdate [id]", "Forcer l'envoie de l'IA"],
+			[".refresh", "Rafraîchir les scripts depuis le serveur"],
 			[".open [id]", "Ouvre l'IA"],
 			[".compare [id1] [id2]", "Compare deux IA"],
 			[".rename [id] [new_name]", "Change le nom de l'IA"],
@@ -964,7 +970,7 @@ var __TAB_COMPLETIONS = [
 	".help", ".backup ", ".forceupdate ",
 	".open ", ".compare ", ".rename ",
 	".sandbox ", ".workspace ", ".challenge ",
-	".leekloud-update", ".changelog"
+	".leekloud-update", ".changelog", ".refresh"
 ].concat("twitter / cfichat / forum / MP / leek / doc ".split(" / "));
 
 ////--------------------------------------------------------------------------------
