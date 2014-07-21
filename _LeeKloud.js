@@ -179,8 +179,9 @@ function nextStep() {
 		return;
 	}
 	open(_LKfolder);
-	verifyVersion();
 	setTimeout(getScripts, 2000);
+    // Set higher timeout for verify version, so that result is displayed last
+	setTimeout(verifyVersion, 6000);
 }
 
 function shutdown() {
