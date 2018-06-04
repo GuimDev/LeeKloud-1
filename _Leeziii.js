@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+console.log("Utilisez la dernière version SVP");
+process.exit();
+
 var __version = "1.1.6i";
 var _Vname = "LeeKloud " + __version;
 
