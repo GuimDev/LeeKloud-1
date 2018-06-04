@@ -1,7 +1,4 @@
-﻿LeeKloud 1.1.6
-========
-
-Une API pour synchroniser vos IA qui sont sur votre ordinateur avec le site [leekwars.com](leekwars.com).
+Vieille version voia : https://github.com/GuimDev/LeeKloud
 
 Pour l'utiliser installer [nodejs](http://nodejs.org/).
 
